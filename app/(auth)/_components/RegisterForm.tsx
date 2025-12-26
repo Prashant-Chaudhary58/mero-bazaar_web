@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, type RegisterSchema } from "./schema";
 import Link from "next/link";
 
-
 export const RegisterForm = () => {
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterSchema>({
     resolver: zodResolver(registerSchema)
