@@ -41,9 +41,15 @@ export const RegisterForm = () => {
           {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message as string}</p>}
         </div>
 
-        <button type="submit" className="w-full bg-[#4B7321] text-white py-2 rounded-md mt-4 hover:bg-opacity-90 transition">
-          Register
-        </button>
+        <Link href="/dashboard">
+          <button
+            type="button"
+            className="w-full bg-[#4B7321] text-white py-2 rounded-md mt-4 hover:bg-opacity-90 transition"
+          >
+            Register
+          </button>
+        </Link>
+
       </form>
       <p className="text-sm mt-4 text-center">
         Already have an account? <Link href="/login" className="text-green-700 font-semibold">Login</Link>
