@@ -31,6 +31,7 @@ export const LoginForm = () => {
         <button type="submit" className="w-full bg-[#4B7321] text-white py-2 rounded-md mt-2 hover:bg-opacity-90">
           Login
         </button>
+  
       </form>
       <p className="text-sm mt-6 text-center">
         Don&apos;t have an account? <Link href="/register" className="text-green-700 font-semibold">Sign Up</Link>
