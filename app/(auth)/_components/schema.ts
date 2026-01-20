@@ -1,19 +1,28 @@
 import { z } from "zod";
 
+// Login Schema
 export const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
+  phone: z
+    .string()
+    .regex(/^98\d{8}$/, "Phone number must start with 98 and have 10 digits (e.g. 9841234567)"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-export const registerSchema = z.object({
-  fullName: z.string().min(2, "Full name is required"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
-
 export type LoginInput = z.infer<typeof loginSchema>;
+
+// Register Schema (no role here anymore)
+export const registerSchema = z
+  .object({
+    fullName: z.string().min(2, "Full name must be at least 2 characters").max(100),
+    phone: z
+      .string()
+      .regex(/^98\d{8}$/, "Phone number must start with 98 and have 10 digits (e.g. 9841234567)"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
 export type RegisterInput = z.infer<typeof registerSchema>;
