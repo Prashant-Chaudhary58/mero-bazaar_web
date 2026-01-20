@@ -1,40 +1,149 @@
-"use client"
+"use client";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema } from "./schema";
+import { loginSchema, LoginInput } from "./schema";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 export const LoginForm = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(loginSchema)
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    mode: "onTouched",
   });
 
+  const onSubmit = async (data: LoginInput) => {
+    setIsLoading(true);
+    setServerError(null);
+
+    try {
+      const response = await fetch("http://localhost:5001/api/v1/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // ← Crucial for sending/receiving HttpOnly cookie
+        body: JSON.stringify({
+          phone: data.phone,
+          password: data.password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // backend errors like "Invalid credentials"
+        setServerError(result.error || "Login failed. Please try again.");
+        return;
+      }
+      // Success!
+      toast.success(`Welcome back! You're now logged in. 🌱`, {
+        duration: 4000,
+      });
+
+      // Success → cookie is automatically set by browser
+      console.log("Login successful:", result);
+
+      router.push("/dashboard");
+    } catch (err) {
+      setServerError("Something went wrong. Please check your connection.");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="w-full max-w-md">
-      <h2 className="text-2xl font-bold mb-6 text-center md:text-left">Welcome to Login!</h2>
-      <form onSubmit={handleSubmit((data) => console.log(data))} className="space-y-4">
-        <div>
-          <label className="block text-sm mb-1">Email</label>
-          <input {...register("email")} className="w-full border p-2 rounded-md" placeholder="Enter your email" />
-          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message as string}</p>}
+    <div className="w-full max-w-md p-4">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Welcome Back</h2>
+
+      {serverError && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
+          {serverError}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">
+            Phone Number
+          </label>
+          <input
+            {...register("phone")}
+            type="tel"
+            className={`border rounded-md p-2.5 outline-none transition w-full ${
+              errors.phone
+                ? "border-red-500 focus:ring-1 focus:ring-red-500"
+                : "border-gray-300 focus:border-[#4B7321]"
+            }`}
+            placeholder="98XXXXXXXX"
+          />
+          {errors.phone && (
+            <span className="text-xs text-red-500 font-medium mt-1">
+              {errors.phone.message}
+            </span>
+          )}
         </div>
 
-        <div>
-          <label className="block text-sm mb-1">Password</label>
-          <input type="password" {...register("password")} className="w-full border p-2 rounded-md" placeholder="Enter your password" />
-          {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message as string}</p>}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Password</label>
+          <input
+            type="password"
+            {...register("password")}
+            className={`border rounded-md p-2.5 outline-none transition w-full ${
+              errors.password
+                ? "border-red-500 focus:ring-1 focus:ring-red-500"
+                : "border-gray-300 focus:border-[#4B7321]"
+            }`}
+            placeholder="••••••••"
+          />
+          {errors.password && (
+            <span className="text-xs text-red-500 font-medium mt-1">
+              {errors.password.message}
+            </span>
+          )}
+
           <div className="text-right mt-1">
-             <Link href="#" className="text-xs text-green-700">Forget Password?</Link>
+            <Link
+              href="/forgot-password" // ← change this route when you implement forgot password
+              className="text-xs text-[#4B7321] hover:underline"
+            >
+              Forgot Password?
+            </Link>
           </div>
         </div>
 
-        <button type="submit" className="w-full bg-[#4B7321] text-white py-2 rounded-md mt-2 hover:bg-opacity-90">
-          Login
+        <button
+          type="submit"
+          disabled={isLoading}
+          className={`w-full py-2.5 rounded-md font-semibold text-white transition-colors mt-2 ${
+            isLoading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-[#4B7321] hover:bg-[#3d5d1a]"
+          }`}
+        >
+          {isLoading ? "Logging in..." : "Login"}
         </button>
-  
       </form>
-      <p className="text-sm mt-6 text-center">
-        Don&apos;t have an account? <Link href="/register" className="text-green-700 font-semibold">Sign Up</Link>
+
+      <p className="mt-6 text-center text-sm text-gray-600">
+        Don&apos;t have an account?{" "}
+        <Link
+          href="/register"
+          className="text-[#4B7321] font-semibold hover:underline"
+        >
+          Sign Up
+        </Link>
       </p>
     </div>
   );
