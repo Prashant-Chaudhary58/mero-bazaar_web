@@ -117,7 +117,7 @@ export const RegisterForm = () => {
           <label className="text-sm font-medium text-black">Full Name</label>
           <input
             {...register("fullName")}
-            className={`border rounded-md p-2 outline-none transition ${errors.fullName
+            className={`border rounded-md p-2 outline-none transition w-full text-gray-900 ${errors.fullName
               ? "border-red-500 focus:ring-1 focus:ring-red-500"
               : "border-gray-300 focus:border-green-500"
               }`}
@@ -137,7 +137,7 @@ export const RegisterForm = () => {
           <input
             {...register("phone")}
             type="tel"
-            className={`border rounded-md p-2 outline-none transition ${errors.phone
+            className={`border rounded-md p-2 outline-none transition w-full text-gray-900 ${errors.phone
               ? "border-red-500 focus:ring-1 focus:ring-red-500"
               : "border-gray-300 focus:border-green-500"
               }`}
@@ -155,7 +155,7 @@ export const RegisterForm = () => {
           <input
             {...register("password")}
             type="password"
-            className={`border rounded-md p-2 outline-none transition ${errors.password
+            className={`border rounded-md p-2 outline-none transition w-full text-gray-900 ${errors.password
               ? "border-red-500 focus:ring-1 focus:ring-red-500"
               : "border-gray-300 focus:border-green-500"
               }`}
@@ -175,7 +175,7 @@ export const RegisterForm = () => {
           <input
             {...register("confirmPassword")}
             type="password"
-            className={`border rounded-md p-2 outline-none transition ${errors.confirmPassword
+            className={`border rounded-md p-2 outline-none transition w-full text-gray-900 ${errors.confirmPassword
               ? "border-red-500 focus:ring-1 focus:ring-red-500"
               : "border-gray-300 focus:border-green-500"
               }`}

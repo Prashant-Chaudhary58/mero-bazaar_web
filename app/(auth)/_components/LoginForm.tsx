@@ -81,7 +81,7 @@ export const LoginForm = () => {
           <input
             {...register("phone")}
             type="tel"
-            className={`border rounded-md p-2.5 outline-none transition w-full ${errors.phone
+            className={`border rounded-md p-2.5 outline-none transition w-full text-gray-900 ${errors.phone
               ? "border-red-500 focus:ring-1 focus:ring-red-500"
               : "border-gray-300 focus:border-[#4B7321]"
               }`}
@@ -99,7 +99,7 @@ export const LoginForm = () => {
           <input
             type="password"
             {...register("password")}
-            className={`border rounded-md p-2.5 outline-none transition w-full ${errors.password
+            className={`border rounded-md p-2.5 outline-none transition w-full text-gray-900 ${errors.password
               ? "border-red-500 focus:ring-1 focus:ring-red-500"
               : "border-gray-300 focus:border-[#4B7321]"
               }`}
