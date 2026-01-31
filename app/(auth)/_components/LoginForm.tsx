@@ -115,7 +115,7 @@ export const LoginForm = () => {
 
           <div className="text-right mt-1">
             <Link
-              href="/forgot-password" // ← change this route when you implement forgot password
+              href="/forgot-password" // ← change this route when implementing forgot password
               className="text-xs text-[#4B7321] hover:underline"
             >
               Forgot Password?
