@@ -97,7 +97,7 @@ export const RegisterForm = () => {
 
   return (
     <div className="w-full max-w-md p-4">
-      <h2 className="text-2xl font-bold mb-2 text-gray-800">
+      <h2 className="text-2xl font-bold mb-2 text-black">
         Sign up as {selectedRole === "seller" ? "Seller (Farmer)" : "Buyer"}
       </h2>
       <p className="text-sm text-gray-600 mb-6">
@@ -114,14 +114,13 @@ export const RegisterForm = () => {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Full Name</label>
+          <label className="text-sm font-medium text-black">Full Name</label>
           <input
             {...register("fullName")}
-            className={`border rounded-md p-2 outline-none transition ${
-              errors.fullName
-                ? "border-red-500 focus:ring-1 focus:ring-red-500"
-                : "border-gray-300 focus:border-green-500"
-            }`}
+            className={`border rounded-md p-2 outline-none transition ${errors.fullName
+              ? "border-red-500 focus:ring-1 focus:ring-red-500"
+              : "border-gray-300 focus:border-green-500"
+              }`}
             placeholder="Ram Bahadur Thapa"
           />
           {errors.fullName && (
@@ -132,17 +131,16 @@ export const RegisterForm = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">
+          <label className="text-sm font-medium text-black">
             Phone Number
           </label>
           <input
             {...register("phone")}
             type="tel"
-            className={`border rounded-md p-2 outline-none transition ${
-              errors.phone
-                ? "border-red-500 focus:ring-1 focus:ring-red-500"
-                : "border-gray-300 focus:border-green-500"
-            }`}
+            className={`border rounded-md p-2 outline-none transition ${errors.phone
+              ? "border-red-500 focus:ring-1 focus:ring-red-500"
+              : "border-gray-300 focus:border-green-500"
+              }`}
             placeholder="98XXXXXXXX"
           />
           {errors.phone && (
@@ -153,15 +151,14 @@ export const RegisterForm = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Password</label>
+          <label className="text-sm font-medium text-black">Password</label>
           <input
             {...register("password")}
             type="password"
-            className={`border rounded-md p-2 outline-none transition ${
-              errors.password
-                ? "border-red-500 focus:ring-1 focus:ring-red-500"
-                : "border-gray-300 focus:border-green-500"
-            }`}
+            className={`border rounded-md p-2 outline-none transition ${errors.password
+              ? "border-red-500 focus:ring-1 focus:ring-red-500"
+              : "border-gray-300 focus:border-green-500"
+              }`}
             placeholder="••••••••"
           />
           {errors.password && (
@@ -172,17 +169,16 @@ export const RegisterForm = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">
+          <label className="text-sm font-medium text-black">
             Confirm Password
           </label>
           <input
             {...register("confirmPassword")}
             type="password"
-            className={`border rounded-md p-2 outline-none transition ${
-              errors.confirmPassword
-                ? "border-red-500 focus:ring-1 focus:ring-red-500"
-                : "border-gray-300 focus:border-green-500"
-            }`}
+            className={`border rounded-md p-2 outline-none transition ${errors.confirmPassword
+              ? "border-red-500 focus:ring-1 focus:ring-red-500"
+              : "border-gray-300 focus:border-green-500"
+              }`}
             placeholder="••••••••"
           />
           {errors.confirmPassword && (
@@ -214,11 +210,10 @@ export const RegisterForm = () => {
         <button
           type="submit"
           disabled={isLoading}
-          className={`w-full py-2.5 rounded-md font-semibold text-white transition-colors ${
-            isLoading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-[#4B7321] hover:bg-[#3d5d1a]"
-          }`}
+          className={`w-full py-2.5 rounded-md font-semibold text-white transition-colors ${isLoading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-[#4B7321] hover:bg-[#3d5d1a]"
+            }`}
         >
           {isLoading ? "Creating account..." : "Create Account"}
         </button>
