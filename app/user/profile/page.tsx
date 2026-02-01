@@ -114,7 +114,7 @@ export default function ProfilePage() {
                 formData.append("image", fileInputRef.current.files[0]);
             }
 
-            const res = await fetch(`http://localhost:5001/api/v1/auth/${user._id}`, { // Updated route
+            const res = await fetch(`http://localhost:5001/api/v1/users/${user._id}`, { // Use dedicated user update route
                 method: "PUT",
                 body: formData,
                 credentials: "include", // For cookie

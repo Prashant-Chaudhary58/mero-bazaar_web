@@ -1,7 +1,7 @@
 export default function HeroSection() {
     return (
         <div className="relative bg-[#729249] overflow-hidden rounded-none md:rounded-b-[0px]">
-            <div className="max-w-7xl mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col md:flex-row items-center justify-between">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-16 flex flex-col md:flex-row items-center justify-between">
 
                 {/* Left Content */}
                 <div className="w-full md:w-1/2 z-10">
