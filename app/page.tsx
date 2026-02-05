@@ -6,6 +6,7 @@ import api from '@/lib/axios';
 import ProductCard from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ProfileModal } from '@/components/profile/ProfileModal';
 
 interface Product {
   _id: string;
@@ -34,18 +35,35 @@ export default function DashboardPage() {
 
   const [user, setUser] = useState<{ fullName: string; role: string; image?: string } | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   useEffect(() => {
     fetchProducts();
+    // 1. Initial load from localStorage for speed
     const storedUser = localStorage.getItem('user');
     if (storedUser && storedUser !== "undefined" && storedUser !== "null") {
       try {
         setUser(JSON.parse(storedUser));
       } catch (e) {
         console.error("Failed to parse user", e);
-        localStorage.removeItem('user'); // Clear invalid data
       }
     }
+
+    // 2. Fetch fresh data from DB to ensure sync (e.g. new image, updated role)
+    const fetchUser = async () => {
+      try {
+        const response = await api.get('/api/v1/auth/me');
+        if (response.data.success) {
+          const freshUser = response.data.data;
+          setUser(freshUser);
+          localStorage.setItem('user', JSON.stringify(freshUser));
+        }
+      } catch (error) {
+        console.error("Failed to fetch fresh user data", error);
+        // If 401, maybe clear localStorage? For now, keep as is or let existing guards handle it
+      }
+    };
+    fetchUser();
   }, []);
 
   const handleLogout = () => {
@@ -53,6 +71,11 @@ export default function DashboardPage() {
     setUser(null);
     // Optionally call API logout endpoint if exists
     window.location.href = '/';
+  };
+
+  const handleUpdateUser = (updatedUser: any) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const getProfileImage = () => {
@@ -155,9 +178,15 @@ export default function DashboardPage() {
                       <p className="text-xs text-gray-500 capitalize">{user.role}</p>
                     </div>
 
-                    <Link href="/profile" className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setIsProfileModalOpen(true);
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
                       <span>👤</span> Edit & View Profile
-                    </Link>
+                    </button>
 
                     {(user.role === 'seller' || user.role === 'farmer') && (
                       <Link href="/seller" className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
@@ -193,6 +222,16 @@ export default function DashboardPage() {
           </div>
         </div>
       </header>
+
+      {/* Profile Modal */}
+      {user && (
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          user={user as any}
+          onUpdate={handleUpdateUser}
+        />
+      )}
 
       {/* Hero / Filter Section */}
       <section className="bg-primary/10 py-8 px-4">
