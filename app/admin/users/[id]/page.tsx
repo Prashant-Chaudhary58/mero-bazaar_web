@@ -1,82 +1,110 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
-export default function UserDetailPage() {
-    const { id } = useParams();
-    const [user, setUser] = useState<any>(null);
+const BackIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+);
+
+interface User {
+    _id: string;
+    fullName: string;
+    phone: string;
+    role: string;
+    image: string;
+    address?: string;
+    city?: string;
+    district?: string;
+    province?: string;
+}
+
+export default function ViewUserPage() {
+    const params = useParams();
+    const router = useRouter();
+    const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchUser();
-    }, [id]);
+        if (params.id) {
+            fetchUser(params.id as string);
+        }
+    }, [params.id]);
 
-    const fetchUser = async () => {
+    const fetchUser = async (id: string) => {
         try {
-            const res = await fetch(`http://localhost:5001/api/admin/users/${id}`, {
+            const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
                 credentials: "include",
             });
             const data = await res.json();
             if (data.success) {
                 setUser(data.data);
+            } else {
+                toast.error("Failed to load user");
             }
-        } catch (err) {
-            console.error(err);
+        } catch (error) {
+            toast.error("Error fetching user");
         } finally {
             setLoading(false);
         }
     };
 
-    if (loading) return <div>Loading...</div>;
-    if (!user) return <div>User not found</div>;
+    if (loading) return <div className="p-8 text-center">Loading...</div>;
+    if (!user) return <div className="p-8 text-center">User not found</div>;
 
     return (
         <div className="p-8 max-w-2xl mx-auto">
-            <div className="mb-6">
-                <Link href="/admin/users" className="text-gray-500 hover:text-black">&larr; Back to Users</Link>
+            <div className="flex items-center mb-6">
+                <button onClick={() => router.back()} className="mr-4 text-green-800">
+                    <BackIcon />
+                </button>
+                <h1 className="text-2xl font-bold">User Details</h1>
+                <Link href={`/admin/users/${user._id}/edit`} className="ml-auto bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Edit
+                </Link>
             </div>
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-                <div className="h-32 bg-[#4B7321]"></div>
-                <div className="px-6 relative">
-                    <div className="w-24 h-24 bg-gray-200 rounded-full border-4 border-white absolute -top-12 overflow-hidden">
-                        {user.image && user.image !== 'no-photo.jpg' ? (
-                            <img src={`http://localhost:5001/public/uploads/${user.image}`} className="w-full h-full object-cover" />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-500">No Img</div>
-                        )}
-                    </div>
-                    <div className="mt-14 mb-6">
-                        <h1 className="text-2xl font-bold text-gray-900">{user.fullName}</h1>
-                        <p className="text-gray-500 capitalize">{user.role}</p>
-                        <p className="text-gray-400 text-sm mt-1">ID: {user._id}</p>
-                    </div>
 
-                    <div className="border-t border-gray-100 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <span className="text-gray-500 text-sm block">Phone</span>
-                            <span className="text-gray-900 font-medium">{user.phone}</span>
-                        </div>
-                        <div>
-                            <span className="text-gray-500 text-sm block">Email</span>
-                            <span className="text-gray-900 font-medium">{user.email || '-'}</span>
-                        </div>
-                        <div>
-                            <span className="text-gray-500 text-sm block">Address</span>
-                            <span className="text-gray-900 font-medium">{user.address || '-'}, {user.city}</span>
-                        </div>
-                        <div>
-                            <span className="text-gray-500 text-sm block">Province</span>
-                            <span className="text-gray-900 font-medium">{user.province || '-'}</span>
-                        </div>
-                    </div>
+            <div className="bg-white p-6 rounded-lg shadow space-y-6">
+                <div className="flex flex-col items-center">
+                    <img
+                        src={user.image && user.image !== "no-photo.jpg" ? `http://localhost:5000/uploads/${user.image}` : "https://via.placeholder.com/150"}
+                        alt={user.fullName}
+                        className="w-32 h-32 rounded-full object-cover border-4 border-gray-100"
+                    />
+                    <h2 className="mt-4 text-xl font-bold text-gray-900">{user.fullName}</h2>
+                    <span className={`px-3 py-1 mt-2 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                            user.role === 'seller' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                        }`}>
+                        {user.role.toUpperCase()}
+                    </span>
+                </div>
 
-                    <div className="py-6 border-t border-gray-100 flex gap-4">
-                        <Link href={`/admin/users/${user._id}/edit`} className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
-                            Edit User
-                        </Link>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                    <div>
+                        <label className="text-sm text-gray-500">Phone</label>
+                        <p className="font-medium">{user.phone}</p>
+                    </div>
+                    <div>
+                        <label className="text-sm text-gray-500">User ID</label>
+                        <p className="font-medium text-gray-400 text-sm">{user._id}</p>
+                    </div>
+                    <div>
+                        <label className="text-sm text-gray-500">Address</label>
+                        <p className="font-medium">{user.address || "-"}</p>
+                    </div>
+                    <div>
+                        <label className="text-sm text-gray-500">City</label>
+                        <p className="font-medium">{user.city || "-"}</p>
+                    </div>
+                    <div>
+                        <label className="text-sm text-gray-500">District</label>
+                        <p className="font-medium">{user.district || "-"}</p>
+                    </div>
+                    <div>
+                        <label className="text-sm text-gray-500">Province</label>
+                        <p className="font-medium">{user.province || "-"}</p>
                     </div>
                 </div>
             </div>

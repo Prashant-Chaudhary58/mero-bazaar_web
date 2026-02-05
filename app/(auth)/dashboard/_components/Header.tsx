@@ -10,6 +10,7 @@ interface User {
     fullName: string;
     image: string;
     role: string;
+    cachedImage?: string;
 }
 
 export default function Header() {
@@ -19,6 +20,17 @@ export default function Header() {
     const router = useRouter();
 
     useEffect(() => {
+        // 1. Try to load from localStorage first
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse user from localStorage", e);
+            }
+        }
+
+        // 2. Fetch fresh data from backend
         fetchUser();
 
         function handleClickOutside(event: MouseEvent) {
@@ -39,10 +51,36 @@ export default function Header() {
             });
             const data = await res.json();
             if (data.success) {
-                setUser(data.data);
+                const userData = data.data;
+
+                // Cache Image as Base64
+                if (userData.image && userData.image !== 'no-photo.jpg') {
+                    try {
+                        const imgRes = await fetch(`http://localhost:5001/public/uploads/${userData.image}`);
+                        const blob = await imgRes.blob();
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const base64data = reader.result;
+                            // Add base64 image to user object for local storage
+                            const userWithCachedImage = { ...userData, cachedImage: base64data };
+                            setUser(userWithCachedImage);
+                            localStorage.setItem("user", JSON.stringify(userWithCachedImage));
+                        };
+                        reader.readAsDataURL(blob);
+                    } catch (imgError) {
+                        console.error("Failed to cache image", imgError);
+                        // Fallback: save user without cached image if image fetch fails
+                        setUser(userData);
+                        localStorage.setItem("user", JSON.stringify(userData));
+                    }
+                } else {
+                    setUser(userData);
+                    localStorage.setItem("user", JSON.stringify(userData));
+                }
             }
         } catch (error) {
             console.error(error);
+            // If fetch fails (backend down), we rely on the initial localStorage load
         }
     };
 
@@ -51,10 +89,18 @@ export default function Header() {
             await fetch("http://localhost:5001/api/v1/auth/logout", {
                 credentials: "include",
             });
+            // 4. Clear localStorage on logout
+            localStorage.removeItem("user");
+            setUser(null); // Clear state immediately
             router.push("/login");
             toast.success("Logged out successfully");
         } catch (error) {
-            toast.error("Logout failed");
+            console.error(error);
+            // Even if api fails, clear local state
+            localStorage.removeItem("user");
+            setUser(null);
+            router.push("/login");
+            toast.success("Logged out (Server Unreachable)");
         }
     };
 
@@ -116,9 +162,15 @@ export default function Header() {
                                 <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-green-100 hover:border-[#4B7321] transition">
                                     {user.image && user.image !== 'no-photo.jpg' ? (
                                         <img
-                                            src={`http://localhost:5001/public/uploads/${user.image}`}
+                                            src={user.cachedImage || `http://localhost:5001/public/uploads/${user.image}`}
                                             alt="Profile"
                                             className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                // Fallback if cached image fails or backend url fails
+                                                e.currentTarget.style.display = 'none';
+                                                e.currentTarget.parentElement?.classList.add('bg-gray-200');
+                                                // Could show SVG here but simply hiding for now or letting it stay empty
+                                            }}
                                         />
                                     ) : (
                                         <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">

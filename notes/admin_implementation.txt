@@ -1,0 +1,68 @@
+# Admin Feature Implementation & Verification Guide
+
+## Achievements
+
+We have successfully implemented the Admin-level API and Frontend pages for User Management, along with Profile Image Upload functionality.
+
+### Backend Changes (`mero_baazar_api`)
+
+1.  **User Model (`models/user_model.js`)**: Updated `role` enum to include `'admin'`.
+2.  **File Upload (`utils/fileUpload.js`)**: Configured Multer to handle image uploads and store them in `public/uploads`.
+3.  **Admin Controller (`controllers/admin_controller.js`)**: Implemented CRUD operations:
+    - `getUsers`: List all users.
+    - `getUser`: Get single user details.
+    - `createUser`: Create new user with image upload.
+    - `updateUser`: Update user details and image.
+    - `deleteUser`: Delete user and their image file.
+4.  **Admin Routes (`routes/admin_route.js`)**: Defined endpoints protected by `protect` and `authorize('admin')` middleware.
+    - `GET /api/admin/users`
+    - `POST /api/admin/users`
+    - `GET /api/admin/users/:id`
+    - `PUT /api/admin/users/:id`
+    - `DELETE /api/admin/users/:id`
+5.  **Auth Controller (`controllers/auth_controller.js`)**: Added `updateDetails` to handle `PUT /api/auth/:id` for profile updates with image upload.
+6.  **Server (`server.js`)**: Mounted admin routes at `/api/admin`.
+
+### Frontend Changes (`mero-bazaar`)
+
+1.  **Proxy/Port Adjustment**: Updated API calls to point to `http://localhost:5000` (Backend Port) instead of `5001`.
+2.  **Profile Page (`app/user/profile/page.tsx`)**:
+    - Implemented image upload preview and submission.
+    - Connected to `PUT /api/v1/auth/:id`.
+3.  **Admin User Management**:
+    - **List (`app/admin/users/page.tsx`)**: Displays table of users with images and roles.
+    - **Create (`app/admin/users/create/page.tsx`)**: Form to create new users with role selection and image upload.
+    - **View (`app/admin/users/[id]/page.tsx`)**: Displays user details.
+    - **Edit (`app/admin/users/[id]/edit/page.tsx`)**: Form to edit existing user details and image.
+
+## How to Check / Verify
+
+1.  **Setup**:
+    - Ensure Backend is running on Port 5000 (`npm start` in `mero_baazar_api`).
+    - Ensure Frontend is running (`npm run dev` in `mero-bazaar`).
+    - Ensure MongoDB is running.
+
+2.  **Admin Access**:
+    - You need an Admin user. If none exists, register a new user via Frontend or Postman, then manually update their role to `'admin'` in MongoDB (using Compass or CLI).
+
+3.  **Verify Admin Features**:
+    - Login as the Admin user.
+    - Navigate to `/admin/users`. You should see the user list.
+    - Click **+ Add User**. Create a new user (Select Role: Buyer/Seller/Admin) and upload a photo.
+    - Verify the new user appears in the list with their photo.
+    - Click **View** on a user.
+    - Click **Edit** on a user. Change their name or photo. Verify the update persists.
+    - Click **Delete** on a user. Verify they are removed.
+
+4.  **Verify Profile Update**:
+    - Login as any user (or stay logged in as Admin).
+    - Go to `/user/profile`.
+    - Click **Edit** on the profile photo. Select a new image.
+    - Update other details (Name, Address).
+    - Click **Save**.
+    - Refresh the page to confirm changes are saved.
+
+## Notes
+- Images are stored in `mero_baazar_api/public/uploads`.
+- Ensure this folder is gitignored (it is).
+- Frontend assumes Backend runs on Port 5000.

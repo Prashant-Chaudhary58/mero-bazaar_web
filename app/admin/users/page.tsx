@@ -23,7 +23,7 @@ export default function AdminUsersPage() {
 
     const fetchUsers = async () => {
         try {
-            const res = await fetch("http://localhost:5001/api/admin/users", {
+            const res = await fetch("http://localhost:5000/api/admin/users", {
                 credentials: "include", // Important for admin middleware
             });
             const data = await res.json();
@@ -44,7 +44,7 @@ export default function AdminUsersPage() {
         if (!confirm("Are you sure you want to delete this user?")) return;
 
         try {
-            const res = await fetch(`http://localhost:5001/api/admin/users/${id}`, {
+            const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
                 method: "DELETE",
                 credentials: "include",
             });
@@ -103,7 +103,7 @@ export default function AdminUsersPage() {
                                                 className="h-10 w-10 rounded-full object-cover"
                                                 src={
                                                     user.image && user.image !== "no-photo.jpg"
-                                                        ? `http://localhost:5001/public/uploads/${user.image}` // Fixed Check path
+                                                        ? `http://localhost:5000/uploads/${user.image}`
                                                         : "https://via.placeholder.com/40"
                                                 }
                                                 alt=""
@@ -122,7 +122,7 @@ export default function AdminUsersPage() {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                                            user.role === 'seller' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                                        user.role === 'seller' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
                                         }`}>
                                         {user.role}
                                     </span>

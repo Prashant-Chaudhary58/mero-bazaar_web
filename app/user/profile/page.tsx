@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { ArrowLeft } from "lucide-react"; // Assuming lucide-react is installed or use similar icon
-// If lucide-react is not installed, I'll replace it with SVG or text in next step if it errors.
-// Using standard SVG for now to be safe.
+
 
 const BackIcon = () => (
     <svg
@@ -56,7 +54,7 @@ export default function ProfilePage() {
     const fetchUser = async () => {
         try {
             // Ideally move API calls to lib/api.ts, but keeping here for speed/context
-            const res = await fetch("http://localhost:5001/api/v1/auth/me", {
+            const res = await fetch("http://localhost:5000/api/v1/auth/me", {
                 headers: {
                     // credentials: 'include' handles cookie, but if we need explicit header (if proxy setup differs)
                 },
@@ -66,12 +64,12 @@ export default function ProfilePage() {
             if (data.success) {
                 setUser(data.data);
                 reset(data.data); // Prefill form
-                setImagePreview(data.data.image ? `http://localhost:5001/public/uploads/${data.data.image}` : null);
+                setImagePreview(data.data.image ? `http://localhost:5000/uploads/${data.data.image}` : null);
                 // Note: Check backend static file serving path. "uploads/" mapping.
                 // Backend: app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
                 // So URL should be http://localhost:5001/uploads/filename
                 if (data.data.image && data.data.image !== 'no-photo.jpg') {
-                    setImagePreview(`http://localhost:5001/uploads/${data.data.image}`);
+                    setImagePreview(`http://localhost:5000/uploads/${data.data.image}`);
                 }
             } else {
                 toast.error("Failed to load profile");
@@ -114,7 +112,7 @@ export default function ProfilePage() {
                 formData.append("image", fileInputRef.current.files[0]);
             }
 
-            const res = await fetch(`http://localhost:5001/api/v1/users/${user._id}`, { // Use dedicated user update route
+            const res = await fetch(`http://localhost:5000/api/v1/auth/${user._id}`, { // Use dedicated user update route
                 method: "PUT",
                 body: formData,
                 credentials: "include", // For cookie
@@ -127,9 +125,9 @@ export default function ProfilePage() {
             } else {
                 toast.error(result.error || "Failed to update profile");
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error("Something went wrong");
+            toast.error(error.message || "Something went wrong");
         } finally {
             setSaving(false);
         }

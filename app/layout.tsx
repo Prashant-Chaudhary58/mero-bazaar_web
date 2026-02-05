@@ -27,12 +27,13 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true}
       >
         {children}
 
         {/* Toast notifications appear here globally */}
         <Toaster
-          position="top-center"              // or "top-right" / "bottom-right"
+          position="top-center"
           reverseOrder={false}
           gutter={8}
           containerClassName=""
@@ -42,7 +43,7 @@ export default function RootLayout({
             className: "",
             duration: 5000,
             style: {
-              background: "#4B7321",         // your brand green
+              background: "#4B7321",
               color: "white",
               borderRadius: "12px",
               padding: "16px 24px",

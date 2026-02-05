@@ -24,13 +24,16 @@ export function middleware(request: NextRequest) {
             }).join(''));
 
             const payload = JSON.parse(jsonPayload);
+            console.log("Middleware Debug - Payload:", payload); // Debug Log
 
             if (payload.role !== 'admin') {
+                console.log("Middleware Debug - Role mismatch. Expected admin, got:", payload.role); // Debug Log
                 // If logged in but not admin, redirect to dashboard or home
                 return NextResponse.redirect(new URL('/dashboard', request.url));
             }
 
         } catch (e) {
+            console.error("Middleware Debug - Token parsing failed:", e); // Debug Log
             // If parsing fails, ignore or redirect
         }
     }
