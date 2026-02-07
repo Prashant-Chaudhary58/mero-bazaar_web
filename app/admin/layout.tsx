@@ -20,7 +20,8 @@ export default function AdminLayout({
 
         try {
             const user = JSON.parse(userStr);
-            if (user.role !== 'admin') {
+            // Allow if role is 'admin' OR if they have the isAdmin flag
+            if (user.role !== 'admin' && !user.isAdmin) {
                 router.push('/dashboard'); // Redirect non-admins
             } else {
                 setAuthorized(true);

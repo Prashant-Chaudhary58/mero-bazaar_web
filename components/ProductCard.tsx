@@ -26,24 +26,16 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     const router = useRouter();
 
-    // Helper to construct image URL
-    const getImageUrl = (imageName: string) => {
-        if (!imageName || imageName === 'no-photo.jpg') {
-            return 'https://via.placeholder.com/300?text=No+Image'; // Fallback
-        }
-        // Assuming backend serves uploads at /uploads
-        return `http://localhost:5001/uploads/${imageName}`;
-    };
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full border border-gray-100 dark:border-gray-700">
             <div className="relative h-48 w-full bg-gray-200">
                 <img
-                    src={getImageUrl(product.image)}
+                    src={product.image ? `http://localhost:5001/uploads/products/${product.image}` : "/placeholder.svg"}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-48 object-cover"
                     onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300?text=Image+Error';
+                        (e.target as HTMLImageElement).src = "/placeholder.svg";
                     }}
                 />
                 <div className="absolute top-2 right-2 bg-white/90 dark:bg-black/70 px-2 py-1 rounded-md text-xs font-bold text-primary shadow-sm">

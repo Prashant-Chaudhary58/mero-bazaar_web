@@ -12,10 +12,17 @@ interface User {
     image: string;
     role: string;
     cachedImage?: string;
+    isAdmin?: boolean;
 }
 
 export default function Header() {
     const [user, setUser] = useState<User | null>(null);
+
+    // DEBUG: Check if isAdmin is present
+    useEffect(() => {
+        if (user) console.log("Current FE User State:", user);
+    }, [user]);
+
     const [showPopup, setShowPopup] = useState(false);
     const popupRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
@@ -49,6 +56,11 @@ export default function Header() {
         try {
             const res = await fetch("http://localhost:5001/api/v1/auth/me", {
                 credentials: "include",
+                cache: "no-store",
+                headers: {
+                    "Pragma": "no-cache",
+                    "Cache-Control": "no-cache"
+                }
             });
             const data = await res.json();
             if (data.success) {
@@ -194,7 +206,10 @@ export default function Header() {
                             {showPopup && (
                                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fade-in-down">
                                     <div className="p-4 border-b border-gray-100">
-                                        <p className="font-bold text-gray-800 text-sm">Hello, {user.fullName.split(' ')[0]}</p>
+                                        <p className="font-bold text-gray-800 text-sm">
+                                            Hello, {user.fullName.split(' ')[0]}
+                                            {(user.role === 'admin' || user.isAdmin) && <span className="ml-2 text-xs text-red-500">(Admin)</span>}
+                                        </p>
                                         <Link onClick={() => setShowPopup(false)} href="/user/profile" className="text-xs text-[#4B7321] hover:underline">
                                             view & edit your profile
                                         </Link>
@@ -206,6 +221,11 @@ export default function Header() {
                                         <button className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                             <span className="mr-3">🌐</span> Language
                                         </button>
+                                        {(user.role === 'admin' || (user as any).isAdmin) && (
+                                            <Link onClick={() => setShowPopup(false)} href="/admin" className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
+                                                <span className="mr-3">🛡️</span> Switch to Admin
+                                            </Link>
+                                        )}
                                         <div className="border-t border-gray-100 my-1"></div>
                                         <button onClick={handleLogout} className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                                             <span className="mr-3">🚪</span> Logout

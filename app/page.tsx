@@ -33,7 +33,7 @@ export default function DashboardPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [user, setUser] = useState<{ fullName: string; role: string; image?: string } | null>(null);
+  const [user, setUser] = useState<{ fullName: string; role: string; image?: string; isAdmin?: boolean } | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
@@ -52,7 +52,13 @@ export default function DashboardPage() {
     // 2. Fetch fresh data from DB to ensure sync (e.g. new image, updated role)
     const fetchUser = async () => {
       try {
-        const response = await api.get('/api/v1/auth/me');
+        // Force fresh fetch to get isAdmin status
+        const response = await api.get('/api/v1/auth/me', {
+          headers: {
+            "Pragma": "no-cache",
+            "Cache-Control": "no-cache"
+          }
+        });
         if (response.data.success) {
           const freshUser = response.data.data;
           setUser(freshUser);
@@ -179,7 +185,10 @@ export default function DashboardPage() {
                 {isDropdownOpen && (
                   <div className="absolute right-0 top-12 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 mb-2">
-                      <p className="text-sm font-bold text-gray-800 dark:text-white truncate">{user.fullName}</p>
+                      <p className="text-sm font-bold text-gray-800 dark:text-white truncate">
+                        {user.fullName}
+                        {(user.role === 'admin' || user.isAdmin) && <span className="ml-2 text-xs text-red-500">(Admin)</span>}
+                      </p>
                       <p className="text-xs text-gray-500 capitalize">{user.role}</p>
                     </div>
 
@@ -196,6 +205,12 @@ export default function DashboardPage() {
                     {(user.role === 'seller' || user.role === 'farmer') && (
                       <Link href="/seller" className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
                         <span>📦</span> My Listing Page
+                      </Link>
+                    )}
+
+                    {(user.role === 'admin' || user.isAdmin) && (
+                      <Link href="/admin" className="block px-4 py-2.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 flex items-center gap-2">
+                        <span>🛡️</span> Switch to Admin
                       </Link>
                     )}
 
