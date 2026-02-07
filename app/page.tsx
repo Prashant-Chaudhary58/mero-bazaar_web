@@ -66,11 +66,15 @@ export default function DashboardPage() {
     fetchUser();
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.get('/api/v1/auth/logout');
+    } catch (error) {
+      console.error("Logout API call failed", error);
+    }
     localStorage.removeItem('user');
     setUser(null);
-    // Optionally call API logout endpoint if exists
-    window.location.href = '/';
+    window.location.href = '/auth/login'; // Redirect to login instead of root to force re-auth visually
   };
 
   const handleUpdateUser = (updatedUser: any) => {
@@ -80,7 +84,8 @@ export default function DashboardPage() {
 
   const getProfileImage = () => {
     if (user?.image && user.image !== "no-photo.jpg") {
-      return `http://localhost:5001/uploads/${user.image}`;
+      const folder = user.role === 'seller' ? 'farmer' : 'buyer';
+      return `http://localhost:5001/uploads/${folder}/${user.image}`;
     }
     return null;
   };

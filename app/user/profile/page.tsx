@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
+import api from "@/lib/axios";
 
 
 const BackIcon = () => (
@@ -35,6 +36,7 @@ interface UserProfile {
     address?: string;
     altPhone?: string;
     image?: string;
+    role: string;
 }
 
 export default function ProfilePage() {
@@ -54,22 +56,29 @@ export default function ProfilePage() {
     const fetchUser = async () => {
         try {
             // Ideally move API calls to lib/api.ts, but keeping here for speed/context
-            const res = await fetch("http://localhost:5000/api/v1/auth/me", {
-                headers: {
-                    // credentials: 'include' handles cookie, but if we need explicit header (if proxy setup differs)
-                },
-                credentials: "include",
-            });
-            const data = await res.json();
+            // Using configured api client
+            const res = await api.get("/api/v1/auth/me");
+            // api client already handling response.data? No, axios returns object with data field. 
+            // Our backend returns { success: true, data: ... }
+            const data = res.data;
+
             if (data.success) {
                 setUser(data.data);
                 reset(data.data); // Prefill form
-                setImagePreview(data.data.image ? `http://localhost:5000/uploads/${data.data.image}` : null);
-                // Note: Check backend static file serving path. "uploads/" mapping.
-                // Backend: app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
-                // So URL should be http://localhost:5001/uploads/filename
+                // Backend serves uploads at /uploads -> public/uploads
+                // BaseURL is http://localhost:5001 (from api.defaults.baseURL or similar if we imported it, 
+                // but better to use a constant or just relative if strictly necessary, but sticking to 5001 explicitly or via env var is safer for now given the issue)
+
+                // Since api.defaults.baseURL is http://localhost:5001
+                const baseUrl = "http://localhost:5001";
+
                 if (data.data.image && data.data.image !== 'no-photo.jpg') {
-                    setImagePreview(`http://localhost:5000/uploads/${data.data.image}`);
+                    // Mobile/Uploads logic puts files in 'buyer' or 'farmer' subfolders based on role
+                    // But server serves /uploads root. 
+                    // So we must append the role folder to the path.
+                    // Check upload.js: role === 'seller' ? 'farmer' : 'buyer'
+                    const folder = data.data.role === 'seller' ? 'farmer' : 'buyer';
+                    setImagePreview(`${baseUrl}/uploads/${folder}/${data.data.image}?t=${new Date().getTime()}`);
                 }
             } else {
                 toast.error("Failed to load profile");
@@ -101,6 +110,7 @@ export default function ProfilePage() {
             const formData = new FormData();
             formData.append("fullName", data.fullName);
             formData.append("email", data.email || "");
+            formData.append("role", user.role); // Crucial for upload middleware fallback
             formData.append("dob", data.dob || "");
             formData.append("province", data.province || "");
             formData.append("district", data.district || "");
@@ -112,13 +122,9 @@ export default function ProfilePage() {
                 formData.append("image", fileInputRef.current.files[0]);
             }
 
-            const res = await fetch(`http://localhost:5000/api/v1/auth/${user._id}`, { // Use dedicated user update route
-                method: "PUT",
-                body: formData,
-                credentials: "include", // For cookie
-            });
+            const res = await api.put(`/api/v1/auth/${user._id}`, formData);
 
-            const result = await res.json();
+            const result = res.data;
             if (result.success) {
                 toast.success("Profile updated successfully!");
                 setUser(result.data);

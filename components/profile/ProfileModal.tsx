@@ -46,7 +46,8 @@ export function ProfileModal({ isOpen, onClose, user, onUpdate }: ProfileModalPr
             setFormData(user);
             if (user.image && user.image !== "no-photo.jpg") {
                 // Append timestamp to prevent caching old image
-                setPreviewImage(`http://localhost:5001/uploads/${user.image}?t=${new Date().getTime()}`);
+                const folder = user.role === 'seller' ? 'farmer' : 'buyer';
+                setPreviewImage(`http://localhost:5001/uploads/${folder}/${user.image}?t=${new Date().getTime()}`);
             } else {
                 setPreviewImage(null);
             }
@@ -156,11 +157,7 @@ export function ProfileModal({ isOpen, onClose, user, onUpdate }: ProfileModalPr
         }
 
         try {
-            const response = await api.put(`/api/v1/auth/${user._id}`, submitData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            const response = await api.put(`/api/v1/auth/${user._id}`, submitData);
 
             if (response.data.success) {
                 toast.success("Profile saved successfully");

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import api from "@/lib/axios";
 
 interface User {
     fullName: string;
@@ -56,7 +57,8 @@ export default function Header() {
                 // Cache Image as Base64
                 if (userData.image && userData.image !== 'no-photo.jpg') {
                     try {
-                        const imgRes = await fetch(`http://localhost:5001/public/uploads/${userData.image}`);
+                        const folder = userData.role === 'seller' ? 'farmer' : 'buyer';
+                        const imgRes = await fetch(`http://localhost:5001/uploads/${folder}/${userData.image}`);
                         const blob = await imgRes.blob();
                         const reader = new FileReader();
                         reader.onloadend = () => {
@@ -84,11 +86,17 @@ export default function Header() {
         }
     };
 
+    // Helper to get image URL for the UI (not for caching)
+    const getImageUrl = () => {
+        if (!user || !user.image || user.image === 'no-photo.jpg') return null;
+        if (user.cachedImage) return user.cachedImage;
+        const folder = user.role === 'seller' ? 'farmer' : 'buyer';
+        return `http://localhost:5001/uploads/${folder}/${user.image}`;
+    };
+
     const handleLogout = async () => {
         try {
-            await fetch("http://localhost:5001/api/v1/auth/logout", {
-                credentials: "include",
-            });
+            await api.get("/api/v1/auth/logout");
             // 4. Clear localStorage on logout
             localStorage.removeItem("user");
             setUser(null); // Clear state immediately
@@ -162,7 +170,7 @@ export default function Header() {
                                 <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-green-100 hover:border-[#4B7321] transition">
                                     {user.image && user.image !== 'no-photo.jpg' ? (
                                         <img
-                                            src={user.cachedImage || `http://localhost:5001/public/uploads/${user.image}`}
+                                            src={getImageUrl() || ''}
                                             alt="Profile"
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
