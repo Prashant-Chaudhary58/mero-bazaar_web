@@ -65,7 +65,7 @@ export const LoginForm = () => {
 
   return (
     <div className="w-full max-w-md p-4">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Welcome Back</h2>
+      <h2 className="text-2xl font-bold mb-6 text-black">Welcome Back</h2>
 
       {serverError && (
         <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
@@ -75,17 +75,16 @@ export const LoginForm = () => {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">
+          <label className="text-sm font-medium text-black">
             Phone Number
           </label>
           <input
             {...register("phone")}
             type="tel"
-            className={`border rounded-md p-2.5 outline-none transition w-full ${
-              errors.phone
-                ? "border-red-500 focus:ring-1 focus:ring-red-500"
-                : "border-gray-300 focus:border-[#4B7321]"
-            }`}
+            className={`border rounded-md p-2.5 outline-none transition w-full text-gray-900 ${errors.phone
+              ? "border-red-500 focus:ring-1 focus:ring-red-500"
+              : "border-gray-300 focus:border-[#4B7321]"
+              }`}
             placeholder="98XXXXXXXX"
           />
           {errors.phone && (
@@ -96,15 +95,14 @@ export const LoginForm = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Password</label>
+          <label className="text-sm font-medium text-black">Password</label>
           <input
             type="password"
             {...register("password")}
-            className={`border rounded-md p-2.5 outline-none transition w-full ${
-              errors.password
-                ? "border-red-500 focus:ring-1 focus:ring-red-500"
-                : "border-gray-300 focus:border-[#4B7321]"
-            }`}
+            className={`border rounded-md p-2.5 outline-none transition w-full text-gray-900 ${errors.password
+              ? "border-red-500 focus:ring-1 focus:ring-red-500"
+              : "border-gray-300 focus:border-[#4B7321]"
+              }`}
             placeholder="••••••••"
           />
           {errors.password && (
@@ -115,7 +113,7 @@ export const LoginForm = () => {
 
           <div className="text-right mt-1">
             <Link
-              href="/forgot-password" // ← change this route when you implement forgot password
+              href="/forgot-password" // ← change this route when implementing forgot password
               className="text-xs text-[#4B7321] hover:underline"
             >
               Forgot Password?
@@ -126,11 +124,10 @@ export const LoginForm = () => {
         <button
           type="submit"
           disabled={isLoading}
-          className={`w-full py-2.5 rounded-md font-semibold text-white transition-colors mt-2 ${
-            isLoading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-[#4B7321] hover:bg-[#3d5d1a]"
-          }`}
+          className={`w-full py-2.5 rounded-md font-semibold text-white transition-colors mt-2 ${isLoading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-[#4B7321] hover:bg-[#3d5d1a]"
+            }`}
         >
           {isLoading ? "Logging in..." : "Login"}
         </button>
