@@ -67,10 +67,14 @@ export default function Header() {
                 const userData = data.data;
 
                 // Cache Image as Base64
+                // Cache Image as Base64
                 if (userData.image && userData.image !== 'no-photo.jpg') {
                     try {
-                        const folder = userData.role === 'seller' ? 'farmer' : 'buyer';
-                        const imgRes = await fetch(`http://localhost:5001/uploads/${folder}/${userData.image}`);
+                        const folder = 'users'; // Now standardized to users
+                        const imageUrl = `http://localhost:5001/uploads/${folder}/${userData.image}?t=${new Date().getTime()}`;
+                        console.log("Header: Fetching image from:", imageUrl);
+                        const imgRes = await fetch(imageUrl);
+                        if (!imgRes.ok) throw new Error(`Image not found: ${imgRes.status}`);
                         const blob = await imgRes.blob();
                         const reader = new FileReader();
                         reader.onloadend = () => {
@@ -82,10 +86,12 @@ export default function Header() {
                         };
                         reader.readAsDataURL(blob);
                     } catch (imgError) {
-                        console.error("Failed to cache image", imgError);
+                        console.error("Header: Failed to cache image", imgError);
                         // Fallback: save user without cached image if image fetch fails
-                        setUser(userData);
-                        localStorage.setItem("user", JSON.stringify(userData));
+                        // IMPORTANT: Clear cachedImage if it exists but is invalid
+                        const userWithoutCache = { ...userData, cachedImage: undefined };
+                        setUser(userWithoutCache);
+                        localStorage.setItem("user", JSON.stringify(userWithoutCache));
                     }
                 } else {
                     setUser(userData);
@@ -93,7 +99,7 @@ export default function Header() {
                 }
             }
         } catch (error) {
-            console.error(error);
+            console.error("Header: fetchUser failed", error);
             // If fetch fails (backend down), we rely on the initial localStorage load
         }
     };
@@ -102,8 +108,10 @@ export default function Header() {
     const getImageUrl = () => {
         if (!user || !user.image || user.image === 'no-photo.jpg') return null;
         if (user.cachedImage) return user.cachedImage;
-        const folder = user.role === 'seller' ? 'farmer' : 'buyer';
-        return `http://localhost:5001/uploads/${folder}/${user.image}`;
+        const folder = 'users';
+        const url = `http://localhost:5001/uploads/${folder}/${user.image}?t=${new Date().getTime()}`;
+        // console.log("Header: Rendering Image URL:", url); // Uncomment for spammy logs
+        return url;
     };
 
     const handleLogout = async () => {

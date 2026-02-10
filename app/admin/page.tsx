@@ -3,19 +3,33 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import api from "@/lib/axios";
 
 export default function AdminDashboard() {
     const [user, setUser] = useState<any>(null);
+    const [stats, setStats] = useState({ pendingProducts: 0, totalUsers: 0 });
     const router = useRouter();
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
             setUser(JSON.parse(storedUser));
+            fetchStats();
         } else {
-            router.push("/login"); // Should be handled by layout, but extra safety
+            router.push("/login");
         }
     }, [router]);
+
+    const fetchStats = async () => {
+        try {
+            const res = await api.get('/api/admin/stats');
+            if (res.data.success) {
+                setStats(res.data.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch stats", error);
+        }
+    };
 
     if (!user) return null;
 
@@ -39,13 +53,13 @@ export default function AdminDashboard() {
                 {/* Stats Cards */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-gray-500 text-sm font-medium">Pending Verifications</h3>
-                    <p className="text-3xl font-bold text-gray-800 mt-2">--</p>
+                    <p className="text-3xl font-bold text-gray-800 mt-2">{stats.pendingProducts}</p>
                     <Link href="/admin/products" className="text-blue-600 text-sm mt-4 inline-block hover:underline">View Products &rarr;</Link>
                 </div>
 
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-gray-500 text-sm font-medium">Total Users</h3>
-                    <p className="text-3xl font-bold text-gray-800 mt-2">--</p>
+                    <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalUsers}</p>
                     <Link href="/admin/users" className="text-blue-600 text-sm mt-4 inline-block hover:underline">Manage Users &rarr;</Link>
                 </div>
             </div>

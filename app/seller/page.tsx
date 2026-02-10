@@ -51,11 +51,10 @@ export default function SellerDashboard() {
             // I will fetch ALL and filter client side for now (Not efficient but works for MVP).
             // OR I can use the existing /products API and filter in JS.
 
-            const response = await api.get('/api/v1/products');
+            // Fetch my products from the dedicated endpoint
+            const response = await api.get('/api/v1/products/my-products');
             if (response.data.success) {
-                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-                const myProducts = response.data.data.filter((p: any) => p.seller._id === storedUser.id || p.seller._id === storedUser._id);
-                setProducts(myProducts);
+                setProducts(response.data.data);
             }
         } catch (error) {
             console.error(error);

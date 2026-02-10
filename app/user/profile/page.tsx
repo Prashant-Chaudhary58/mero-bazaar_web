@@ -77,7 +77,8 @@ export default function ProfilePage() {
                     // But server serves /uploads root. 
                     // So we must append the role folder to the path.
                     // Check upload.js: role === 'seller' ? 'farmer' : 'buyer'
-                    const folder = data.data.role === 'seller' ? 'farmer' : 'buyer';
+                    // Now standardized to users folder
+                    const folder = 'users';
                     setImagePreview(`${baseUrl}/uploads/${folder}/${data.data.image}?t=${new Date().getTime()}`);
                 }
             } else {

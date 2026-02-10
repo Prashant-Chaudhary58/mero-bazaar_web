@@ -62,7 +62,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                         Qty: {product.quantity}
                     </span>
                     <span className="flex items-center text-yellow-500">
-                        ★ {product.averageRating.toFixed(1)} ({product.numOfReviews})
+                        ★ {(product.averageRating || 0).toFixed(1)} ({product.numOfReviews || 0})
                     </span>
                 </div>
 

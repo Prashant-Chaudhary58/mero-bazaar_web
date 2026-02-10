@@ -73,9 +73,9 @@ export default function AdminProductsPage() {
                         <div key={product._id || product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                             <div className="h-48 bg-gray-200 relative">
                                 <img
-                                    src={`http://localhost:5001/uploads/farmer/${product.image}`}
+                                    src={`http://localhost:5001/uploads/${product.image}`}
                                     className="w-full h-full object-cover"
-                                    onError={(e) => e.currentTarget.src = '/no-photo.jpg'}
+                                    onError={(e) => e.currentTarget.src = '/placeholder.svg'}
                                     alt={product.name}
                                 />
                             </div>
