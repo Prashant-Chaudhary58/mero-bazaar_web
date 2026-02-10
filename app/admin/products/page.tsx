@@ -54,6 +54,18 @@ export default function AdminProductsPage() {
         }
     };
 
+    const handleDeny = async (id: string) => {
+        if (!confirm("Are you sure you want to deny (delete) this product?")) return;
+        try {
+            await api.delete(`/api/v1/products/${id}`);
+            toast.success("Product Denied/Deleted");
+            setProducts(products.filter(p => p._id !== id && p.id !== id));
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to deny product");
+        }
+    };
+
     if (loading) return <div className="p-8">Loading...</div>;
 
     return (
@@ -73,7 +85,7 @@ export default function AdminProductsPage() {
                         <div key={product._id || product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                             <div className="h-48 bg-gray-200 relative">
                                 <img
-                                    src={`http://localhost:5001/uploads/${product.image}`}
+                                    src={`http://localhost:5001/uploads/products/${product.image}`}
                                     className="w-full h-full object-cover"
                                     onError={(e) => e.currentTarget.src = '/placeholder.svg'}
                                     alt={product.name}
@@ -87,12 +99,20 @@ export default function AdminProductsPage() {
                                     <p>Phone: {product.seller?.phone}</p>
                                     <p>Category: {product.category}</p>
                                 </div>
-                                <button
-                                    onClick={() => handleVerify(product._id || product.id)}
-                                    className="w-full mt-4 bg-[#4B7321] text-white py-2 rounded-lg hover:bg-green-800 transition"
-                                >
-                                    Verify Product
-                                </button>
+                                <div className="flex gap-2 mt-4">
+                                    <button
+                                        onClick={() => handleDeny(product._id || product.id)}
+                                        className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition"
+                                    >
+                                        Deny
+                                    </button>
+                                    <button
+                                        onClick={() => handleVerify(product._id || product.id)}
+                                        className="flex-1 bg-[#4B7321] text-white py-2 rounded-lg hover:bg-green-800 transition"
+                                    >
+                                        Verify
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ))}

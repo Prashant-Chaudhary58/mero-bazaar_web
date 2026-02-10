@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
+import DistanceDisplay from '@/components/DistanceDisplay';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -33,9 +34,8 @@ interface Product {
         fullName: string;
         phone: string;
         address: string;
-        location?: {
-            coordinates: [number, number]; // [lng, lat]
-        };
+        lat: string;
+        lng: string;
     };
     reviews?: Review[];
 }
@@ -47,6 +47,19 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
     const router = useRouter();
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<{ _id: string; role: string; isAdmin?: boolean } | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse user", e);
+            }
+        }
+    }, []);
 
     // Review Form State
     const [rating, setRating] = useState(5);
@@ -73,8 +86,9 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
     };
 
     const handleVisitFarm = () => {
-        if (product?.seller?.location) {
-            const [lng, lat] = product.seller.location.coordinates;
+        if (product?.seller?.lat && product.seller?.lng) {
+            const lat = product.seller.lat;
+            const lng = product.seller.lng;
             window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
         } else {
             toast.error("Seller location not available");
@@ -83,7 +97,22 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
 
     const handleCallFarmer = () => {
         if (product?.seller?.phone) {
-            window.open(`tel:${product.seller.phone}`);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm("Are you sure you want to delete this product?")) return;
+
+        setDeleting(true);
+        try {
+            await api.delete(`/api/v1/products/${id}`);
+            toast.success("Product deleted successfully");
+            router.push('/');
+        } catch (error: any) {
+            console.error("Delete failed", error);
+            toast.error(error.response?.data?.error || "Failed to delete product");
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -175,14 +204,35 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
                             </div>
                         </div>
 
+                        {/* Distance Display */}
+                        {product.seller?.lat && product.seller?.lng && (
+                            <div className="flex justify-center mb-6">
+                                <DistanceDisplay
+                                    targetLat={parseFloat(product.seller.lat)}
+                                    targetLng={parseFloat(product.seller.lng)}
+                                />
+                            </div>
+                        )}
+
                         {/* Action Buttons */}
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 flex-wrap">
                             <Button onClick={handleCallFarmer} variant="outline" className="flex-1">
                                 📞 Call Farmer
                             </Button>
-                            <Button onClick={handleVisitFarm} className="flex-1">
+                            <Button onClick={handleVisitFarm} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
                                 📍 Visit Farm
                             </Button>
+
+                            {/* Delete Button for Seller only (Admin uses Admin Dashboard) */}
+                            {user && product && user._id === product.seller._id && (
+                                <Button
+                                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                                    onClick={handleDelete}
+                                    disabled={deleting}
+                                >
+                                    {deleting ? "Deleting..." : "🗑️ Delete Product"}
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>
