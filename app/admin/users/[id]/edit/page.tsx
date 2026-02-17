@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
+import api from "@/lib/axios";
 
 const BackIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
@@ -38,12 +39,9 @@ export default function EditUserPage() {
 
     const fetchUser = async (id: string) => {
         try {
-            const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
-                credentials: "include",
-            });
-            const data = await res.json();
-            if (data.success) {
-                const u = data.data;
+            const res = await api.get(`/api/admin/users/${id}`);
+            if (res.data.success) {
+                const u = res.data.data;
                 reset({
                     fullName: u.fullName,
                     phone: u.phone,
@@ -54,12 +52,16 @@ export default function EditUserPage() {
                     province: u.province
                 });
                 if (u.image && u.image !== "no-photo.jpg") {
-                    setImagePreview(`http://localhost:5000/uploads/${u.image}`);
+                    // Use rewrite path if available, or fallback to absolute if needed. 
+                    // Given next.config.ts has rewrites for /uploads, we can use relative.
+                    // But to be safe, if we are on localhost:3000, /uploads goes to backend.
+                    setImagePreview(`/uploads/users/${u.image}`);
                 }
             } else {
                 toast.error("Failed to load user");
             }
         } catch (error) {
+            console.error(error);
             toast.error("Error fetching user");
         } finally {
             setLoading(false);
@@ -94,21 +96,18 @@ export default function EditUserPage() {
                 formData.append("image", fileInputRef.current.files[0]);
             }
 
-            const res = await fetch(`http://localhost:5000/api/admin/users/${params.id}`, {
-                method: "PUT",
-                body: formData,
-                credentials: "include",
-            });
+            // Axios automatically sets Content-Type to multipart/form-data when body is FormData
+            const res = await api.put(`/api/admin/users/${params.id}`, formData);
 
-            const result = await res.json();
-            if (result.success) {
+            if (res.data.success) {
                 toast.success("User updated successfully");
                 router.push("/admin/users");
             } else {
-                toast.error(result.error || "Failed to update user");
+                toast.error(res.data.error || "Failed to update user");
             }
-        } catch (error) {
-            toast.error("Error updating user");
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.response?.data?.error || "Error updating user");
         } finally {
             setSaving(false);
         }
@@ -119,8 +118,8 @@ export default function EditUserPage() {
     return (
         <div className="p-8 max-w-2xl mx-auto">
             <div className="flex items-center mb-6">
-                <button onClick={() => router.back()} className="mr-4 text-green-800">
-                    <BackIcon />
+                <button onClick={() => router.back()} className="mr-4 text-green-800 flex items-center gap-2 font-medium">
+                    <BackIcon /> Back
                 </button>
                 <h1 className="text-2xl font-bold">Edit User: {params.id}</h1>
             </div>
@@ -200,9 +199,14 @@ export default function EditUserPage() {
                         </select>
                     </div>
 
-                    <button type="submit" disabled={saving} className="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition disabled:opacity-50">
-                        {saving ? "Saving..." : "Update User"}
-                    </button>
+                    <div className="flex gap-4">
+                        <button type="button" onClick={() => router.push('/admin/users')} className="w-full bg-gray-200 text-gray-800 py-2 rounded-md hover:bg-gray-300 transition">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={saving} className="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition disabled:opacity-50">
+                            {saving ? "Saving..." : "Update User"}
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

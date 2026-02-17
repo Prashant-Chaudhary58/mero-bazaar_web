@@ -97,7 +97,7 @@ export default function AdminUsersPage() {
                                                 className="h-10 w-10 rounded-full object-cover"
                                                 src={
                                                     user.image && user.image !== "no-photo.jpg"
-                                                        ? `http://localhost:5001/uploads/${user.image}`
+                                                        ? `http://localhost:5001/uploads/users/${user.image}`
                                                         : "/placeholder.svg"
                                                 }
                                                 alt=""

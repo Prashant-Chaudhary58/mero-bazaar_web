@@ -35,7 +35,7 @@ export default function ViewUserPage() {
 
     const fetchUser = async (id: string) => {
         try {
-            const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
+            const res = await fetch(`http://localhost:5001/api/admin/users/${id}`, {
                 credentials: "include",
             });
             const data = await res.json();
@@ -69,13 +69,13 @@ export default function ViewUserPage() {
             <div className="bg-white p-6 rounded-lg shadow space-y-6">
                 <div className="flex flex-col items-center">
                     <img
-                        src={user.image && user.image !== "no-photo.jpg" ? `http://localhost:5000/uploads/${user.image}` : "https://via.placeholder.com/150"}
+                        src={user.image && user.image !== "no-photo.jpg" ? `http://localhost:5001/uploads/users/${user.image}` : "https://via.placeholder.com/150"}
                         alt={user.fullName}
                         className="w-32 h-32 rounded-full object-cover border-4 border-gray-100"
                     />
                     <h2 className="mt-4 text-xl font-bold text-gray-900">{user.fullName}</h2>
                     <span className={`px-3 py-1 mt-2 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                            user.role === 'seller' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                        user.role === 'seller' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
                         }`}>
                         {user.role.toUpperCase()}
                     </span>

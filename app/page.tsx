@@ -90,7 +90,7 @@ export default function DashboardPage() {
 
   const getProfileImage = () => {
     if (user?.image && user.image !== "no-photo.jpg") {
-      const folder = user.role === 'seller' ? 'farmer' : 'buyer';
+      const folder = 'users'; // Standardized to 'users'
       return `http://localhost:5001/uploads/${folder}/${user.image}`;
     }
     return null;

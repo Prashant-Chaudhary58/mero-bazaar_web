@@ -164,7 +164,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
                 <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm">
                     <div className="h-64 sm:h-80 md:h-96 w-full bg-gray-200 relative">
                         <img
-                            src={product.image !== 'no-photo.jpg' ? `http://localhost:5001/uploads/${product.image}` : 'https://via.placeholder.com/600'}
+                            src={product.image !== 'no-photo.jpg' ? `http://localhost:5001/uploads/products/${product.image}` : 'https://via.placeholder.com/600'}
                             alt={product.name}
                             className="w-full h-full object-cover"
                         />

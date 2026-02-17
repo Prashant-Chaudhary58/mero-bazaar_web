@@ -63,7 +63,7 @@ export default function CreateUserPage() {
             // Using POST /api/admin/users as per request to create admin level user management
             // Also user mentioned POST /api/auth/user in request but context implies admin user creation.
             // Admin user creation typically maps to POST /api/admin/users
-            const res = await fetch("http://localhost:5000/api/admin/users", {
+            const res = await fetch("http://localhost:5001/api/admin/users", {
                 method: "POST",
                 body: formData,
                 credentials: "include",
@@ -120,19 +120,19 @@ export default function CreateUserPage() {
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Full Name</label>
-                        <input {...register("fullName", { required: true })} className="mt-1 w-full border rounded-md p-2" />
+                        <input {...register("fullName", { required: true })} className="mt-1 w-full border rounded-md p-2 text-black" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Phone</label>
-                        <input {...register("phone", { required: true })} className="mt-1 w-full border rounded-md p-2" />
+                        <input {...register("phone", { required: true })} className="mt-1 w-full border rounded-md p-2 text-black" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" {...register("password", { required: true, minLength: 6 })} className="mt-1 w-full border rounded-md p-2" />
+                        <input type="password" {...register("password", { required: true, minLength: 6 })} className="mt-1 w-full border rounded-md p-2 text-black" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Role</label>
-                        <select {...register("role")} className="mt-1 w-full border rounded-md p-2">
+                        <select {...register("role")} className="mt-1 w-full border rounded-md p-2 text-black">
                             <option value="buyer">Buyer</option>
                             <option value="seller">Seller</option>
                             <option value="admin">Admin</option>
@@ -141,21 +141,21 @@ export default function CreateUserPage() {
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Address</label>
-                        <input {...register("address")} className="mt-1 w-full border rounded-md p-2" />
+                        <input {...register("address")} className="mt-1 w-full border rounded-md p-2 text-black" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700">City</label>
-                            <input {...register("city")} className="mt-1 w-full border rounded-md p-2" />
+                            <input {...register("city")} className="mt-1 w-full border rounded-md p-2 text-black" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">District</label>
-                            <input {...register("district")} className="mt-1 w-full border rounded-md p-2" />
+                            <input {...register("district")} className="mt-1 w-full border rounded-md p-2 text-black" />
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Province</label>
-                        <select {...register("province")} className="mt-1 w-full border rounded-md p-2">
+                        <select {...register("province")} className="mt-1 w-full border rounded-md p-2 text-black">
                             <option value="">Select Province</option>
                             <option value="Koshi">Koshi</option>
                             <option value="Madhesh">Madhesh</option>

@@ -1,11 +1,15 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import dynamic from 'next/dynamic'; // Import dynamic
 import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import toast from 'react-hot-toast';
+
+// Dynamically import MapPicker with SSR disabled
+const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
 
 interface User {
     _id: string;
@@ -20,14 +24,19 @@ interface User {
     city?: string;
     address?: string;
     altPhone?: string;
+    // Location can be null or object
     location?: {
         type: string;
-        coordinates: number[];
+        coordinates: [number, number]; // [lat, lng] -> No, GeoJSON is [lng, lat] usually
     };
 }
 
 export default function ProfilePage() {
     const router = useRouter();
+    const [showMap, setShowMap] = useState(false); // State for map modal
+    const [showLocationChoice, setShowLocationChoice] = useState(false); // State for choice modal
+
+    // User Data State
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -43,10 +52,20 @@ export default function ProfilePage() {
             try {
                 const response = await api.get('/api/v1/auth/me');
                 if (response.data.success) {
-                    setUser(response.data.data);
+                    const userData = response.data.data;
+
+                    // Construct location object from lat/lng if available and location is missing
+                    if (!userData.location && userData.lat && userData.lng) {
+                        userData.location = {
+                            type: 'Point',
+                            coordinates: [parseFloat(userData.lng), parseFloat(userData.lat)]
+                        };
+                    }
+
+                    setUser(userData);
                     // Set initial preview if image exists
-                    if (response.data.data.image && response.data.data.image !== "no-photo.jpg") {
-                        setPreviewImage(`http://localhost:5001/uploads/${response.data.data.image}`);
+                    if (userData.image && userData.image !== "no-photo.jpg") {
+                        setPreviewImage(`http://localhost:5001/uploads/users/${userData.image}`);
                     }
                 }
             } catch (error) {
@@ -57,6 +76,46 @@ export default function ProfilePage() {
                 setLoading(false);
             }
         };
+
+        // ... (keep handleImageChange and handleLocationSelect same)
+
+        // ... inside handleSubmit ...
+        // Append Location manually if it exists
+        if (user.location && user.location.coordinates) {
+            // Backend expects lat and lng fields
+            formData.append('lng', user.location.coordinates[0].toString());
+            formData.append('lat', user.location.coordinates[1].toString());
+        }
+
+        // ... inside return JSX ...
+        {
+            user.role === 'seller' && (
+                <div className="mb-6">
+                    <div className="flex gap-4 mb-2">
+                        <Button
+                            type="button"
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-6 text-lg font-medium shadow-sm transition-all active:scale-[0.98]"
+                            onClick={() => setShowLocationChoice(true)}
+                        >
+                            📍 Set Farm Location (Auto-Fill)
+                        </Button>
+                        <Button
+                            type="button"
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium shadow-sm transition-all active:scale-[0.98]"
+                            onClick={() => setShowMap(true)}
+                        >
+                            🗺️ Pick on Map
+                        </Button>
+                    </div>
+
+                    {user.location && user.location.coordinates && (
+                        <p className="text-xs text-green-600 mt-2 text-center">
+                            ✅ Location is currently set to: {user.location.coordinates[1].toFixed(4)}, {user.location.coordinates[0].toFixed(4)}
+                        </p>
+                    )}
+                </div>
+            )
+        }
 
         fetchUser();
     }, [router]);
@@ -73,6 +132,45 @@ export default function ProfilePage() {
         }
     };
 
+    const handleLocationSelect = (lat: number, lng: number) => {
+        if (user) {
+            // Update local user state immediately for UI feedback
+            setUser({
+                ...user,
+                location: {
+                    type: 'Point',
+                    coordinates: [lng, lat], // GeoJSON usage: [lng, lat]
+                },
+            });
+            setShowMap(false);
+            toast.success("Location selected! Click Save Changes to update.");
+        }
+    };
+
+    const handleAutoGPS = () => {
+        if (!navigator.geolocation) {
+            toast.error("Geolocation is not supported by your browser");
+            return;
+        }
+
+        const toastId = toast.loading("Fetching current location...");
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                // Reverse geocoding could happen here to fill address fields if needed
+                handleLocationSelect(latitude, longitude);
+                toast.dismiss(toastId);
+                setShowLocationChoice(false);
+            },
+            (error) => {
+                console.error(error);
+                toast.error("Unable to retrieve your location");
+                toast.dismiss(toastId);
+            }
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
@@ -86,10 +184,23 @@ export default function ProfilePage() {
             formData.append('image', selectedFile);
         }
 
+        // Append Location manually if it exists
+        // Backend expects text fields or JSON string? 
+        // Usually simpler to send as individual fields 'lat', 'lng' OR 'location' as JSON string
+        // Let's assume sending as 'location' JSON string is best if backend supports it.
+        // OR checking auth_controller: it usually updates req.body directly.
+        // If Model has location: { type: Point ... }, we might need to send:
+        // location[type]=Point&location[coordinates][0]=lng&location[coordinates][1]=lat
+        // Or if backend parses JSON from text field:
+        // Append Location manually if it exists
+        if (user.location && user.location.coordinates) {
+            // Backend expects lat and lng fields
+            formData.append('lng', user.location.coordinates[0].toString());
+            formData.append('lat', user.location.coordinates[1].toString());
+        }
+
         try {
             // Send PUT request to update profile
-            // Backend route: PUT /api/v1/auth/:id
-            // Note: We need to use axios to send FormData
             const response = await api.put(`/api/v1/auth/${user._id}`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
@@ -104,9 +215,6 @@ export default function ProfilePage() {
                 // Update localStorage so header reflects changes immediately
                 localStorage.setItem('user', JSON.stringify(updatedUser));
 
-                // Force a reload or router refresh to update header state if needed
-                // router.refresh(); 
-                // For now, let's relad to ensure header picks up new image
                 window.location.reload();
             }
         } catch (error: any) {
@@ -126,6 +234,65 @@ export default function ProfilePage() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-10 px-4">
+            {/* Map Modal */}
+            {showMap && (
+                <MapPicker
+                    initialLocation={
+                        user.location?.coordinates
+                            ? [user.location.coordinates[1], user.location.coordinates[0]] // [lat, lng] for Leaflet
+                            : undefined
+                    }
+                    onLocationSelect={handleLocationSelect}
+                    onCancel={() => setShowMap(false)}
+                />
+            )}
+
+            {/* Location Choice Modal */}
+            {showLocationChoice && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <h3 className="text-xl font-semibold mb-4 text-center">Set Location</h3>
+                        <p className="text-gray-500 text-center mb-6">How would you like to set your farm location?</p>
+
+                        <div className="space-y-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full py-6 flex items-center justify-center gap-2 text-base border-primary/20 hover:bg-primary/5 hover:text-primary"
+                                onClick={handleAutoGPS}
+                            >
+                                🎯 Use Current GPS
+                            </Button>
+
+                            <div className="relative flex py-2 items-center">
+                                <div className="flex-grow border-t border-gray-200"></div>
+                                <span className="flex-shrink mx-4 text-gray-400 text-xs uppercase">Or</span>
+                                <div className="flex-grow border-t border-gray-200"></div>
+                            </div>
+
+                            <Button
+                                type="button"
+                                className="w-full py-6 flex items-center justify-center gap-2 text-base"
+                                onClick={() => {
+                                    setShowLocationChoice(false);
+                                    setShowMap(true);
+                                }}
+                            >
+                                🗺️ Pick on Map
+                            </Button>
+                        </div>
+
+                        <Button
+                            variant="ghost"
+                            className="w-full mt-4 text-gray-400"
+                            onClick={() => setShowLocationChoice(false)}
+                        >
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                 {/* Header */}
                 <div className="bg-primary/10 p-6 flex items-center justify-between">
@@ -173,29 +340,7 @@ export default function ProfilePage() {
                                 Click to upload a new profile picture. JPG, PNG supported.
                             </p>
 
-                            {/* Set Farm Location Logic */}
-                            {user.role === 'seller' && (
-                                <div className="mt-4 w-full">
-                                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Farm Location</h3>
-                                    {user.location ? (
-                                        <div className="text-xs text-green-600 bg-green-50 p-2 rounded text-center mb-2">
-                                            ✅ Location Set
-                                        </div>
-                                    ) : (
-                                        <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded text-center mb-2">
-                                            ⚠️ Location Not Set
-                                        </div>
-                                    )}
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="w-full text-xs"
-                                        onClick={() => toast("Map feature coming soon! Check mobile app for now.")}
-                                    >
-                                        📍 Set on Map
-                                    </Button>
-                                </div>
-                            )}
+                            {/* Set Farm Location Logic - Moved to Main Form */}
                         </div>
 
                         {/* Right Side: Fields */}
@@ -219,7 +364,7 @@ export default function ProfilePage() {
                                         defaultValue={user.phone}
                                         placeholder="98XXXXXXXX"
                                         className="text-black bg-gray-50"
-                                        readOnly // Usually phone is immutable ID, but can enable if needed
+                                        readOnly
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -243,65 +388,95 @@ export default function ProfilePage() {
                                 </div>
                             </div>
 
-                            <h2 className="text-lg font-semibold text-gray-800 border-b pb-2 pt-4">Address Details</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-700">Province</label>
-                                    <Input
-                                        name="province"
-                                        defaultValue={user.province}
-                                        placeholder="e.g. Bagmati"
-                                        className="text-black"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-700">District</label>
-                                    <Input
-                                        name="district"
-                                        defaultValue={user.district}
-                                        placeholder="e.g. Kathmandu"
-                                        className="text-black"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-700">City / Municipality</label>
-                                    <Input
-                                        name="city"
-                                        defaultValue={user.city}
-                                        placeholder="e.g. Kathmandu Metro"
-                                        className="text-black"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-700">Street Address</label>
-                                    <Input
-                                        name="address"
-                                        defaultValue={user.address}
-                                        placeholder="e.g. Balaju-16"
-                                        className="text-black"
-                                    />
-                                </div>
-                            </div>
+                            <div className="pt-4">
+                                <h2 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Location Details</h2>
 
-                            <div className="pt-6 flex justify-end gap-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => router.back()}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={saving}
-                                >
-                                    {saving ? 'Saving...' : 'Save Changes'}
-                                </Button>
+                                {user.role === 'seller' && (
+                                    <div className="mb-6">
+                                        <div className="flex gap-4 mb-2">
+                                            <Button
+                                                type="button"
+                                                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-6 text-lg font-medium shadow-sm transition-all active:scale-[0.98]"
+                                                onClick={() => setShowLocationChoice(true)}
+                                            >
+                                                📍 Set Farm Location (Auto-Fill)
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium shadow-sm transition-all active:scale-[0.98]"
+                                                onClick={() => setShowMap(true)}
+                                            >
+                                                🗺️ Pick on Map
+                                            </Button>
+                                        </div>
+
+                                        {user.location && user.location.coordinates && (
+                                            <p className="text-xs text-green-600 mt-2 text-center">
+                                                ✅ Location is currently set to: {user.location.coordinates[1].toFixed(4)}, {user.location.coordinates[0].toFixed(4)}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-700">Province</label>
+                                        <Input
+                                            name="province"
+                                            defaultValue={user.province}
+                                            placeholder="e.g. Bagmati"
+                                            className="text-black"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-700">District</label>
+                                        <Input
+                                            name="district"
+                                            defaultValue={user.district}
+                                            placeholder="e.g. Kathmandu"
+                                            className="text-black"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-700">City / Municipality</label>
+                                        <Input
+                                            name="city"
+                                            defaultValue={user.city}
+                                            placeholder="e.g. Kathmandu Metro"
+                                            className="text-black"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-700">Street Address</label>
+                                        <Input
+                                            name="address"
+                                            defaultValue={user.address}
+                                            placeholder="e.g. Balaju-16"
+                                            className="text-black"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="pt-6 flex justify-end gap-4">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => router.back()}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={saving}
+                                    >
+                                        {saving ? 'Saving...' : 'Save Changes'}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </form>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import api from "@/lib/axios";
+import { Button } from '@/components/ui/button';
 
+// Dynamically import MapPicker with SSR disabled
+const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
 
 const BackIcon = () => (
     <svg
@@ -37,6 +41,12 @@ interface UserProfile {
     altPhone?: string;
     image?: string;
     role: string;
+    lat?: string;
+    lng?: string;
+    location?: {
+        type: string;
+        coordinates: [number, number];
+    };
 }
 
 export default function ProfilePage() {
@@ -45,6 +55,8 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [showMap, setShowMap] = useState(false);
+    const [showLocationChoice, setShowLocationChoice] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { register, handleSubmit, setValue, reset } = useForm<UserProfile>();
@@ -55,31 +67,28 @@ export default function ProfilePage() {
 
     const fetchUser = async () => {
         try {
-            // Ideally move API calls to lib/api.ts, but keeping here for speed/context
-            // Using configured api client
             const res = await api.get("/api/v1/auth/me");
-            // api client already handling response.data? No, axios returns object with data field. 
-            // Our backend returns { success: true, data: ... }
             const data = res.data;
 
             if (data.success) {
-                setUser(data.data);
-                reset(data.data); // Prefill form
-                // Backend serves uploads at /uploads -> public/uploads
-                // BaseURL is http://localhost:5001 (from api.defaults.baseURL or similar if we imported it, 
-                // but better to use a constant or just relative if strictly necessary, but sticking to 5001 explicitly or via env var is safer for now given the issue)
+                const userData = data.data;
 
-                // Since api.defaults.baseURL is http://localhost:5001
-                const baseUrl = "http://localhost:5001";
+                // Construct location object from lat/lng if available and location is missing
+                if (!userData.location && userData.lat && userData.lng) {
+                    userData.location = {
+                        type: 'Point',
+                        coordinates: [parseFloat(userData.lng), parseFloat(userData.lat)]
+                    };
+                }
 
-                if (data.data.image && data.data.image !== 'no-photo.jpg') {
-                    // Mobile/Uploads logic puts files in 'buyer' or 'farmer' subfolders based on role
-                    // But server serves /uploads root. 
-                    // So we must append the role folder to the path.
-                    // Check upload.js: role === 'seller' ? 'farmer' : 'buyer'
-                    // Now standardized to users folder
-                    const folder = 'users';
-                    setImagePreview(`${baseUrl}/uploads/${folder}/${data.data.image}?t=${new Date().getTime()}`);
+                setUser(userData);
+                reset(userData);
+
+                // Fix image path logic
+                if (userData.image && userData.image !== 'no-photo.jpg') {
+                    // Assuming uploads are at /uploads/users/
+                    // Using relative path to leverage Next.js rewrite
+                    setImagePreview(`/uploads/users/${userData.image}`);
                 }
             } else {
                 toast.error("Failed to load profile");
@@ -90,6 +99,45 @@ export default function ProfilePage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleLocationSelect = (lat: number, lng: number) => {
+        if (user) {
+            setUser({
+                ...user,
+                lat: lat.toString(),
+                lng: lng.toString(),
+                location: {
+                    type: 'Point',
+                    coordinates: [lng, lat],
+                },
+            });
+            setShowMap(false);
+            toast.success("Location selected! Click Save to update.");
+        }
+    };
+
+    const handleAutoGPS = () => {
+        if (!navigator.geolocation) {
+            toast.error("Geolocation is not supported by your browser");
+            return;
+        }
+
+        const toastId = toast.loading("Fetching current location...");
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                handleLocationSelect(latitude, longitude);
+                toast.dismiss(toastId);
+                setShowLocationChoice(false);
+            },
+            (error) => {
+                console.error(error);
+                toast.error("Unable to retrieve your location");
+                toast.dismiss(toastId);
+            }
+        );
     };
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,13 +159,22 @@ export default function ProfilePage() {
             const formData = new FormData();
             formData.append("fullName", data.fullName);
             formData.append("email", data.email || "");
-            formData.append("role", user.role); // Crucial for upload middleware fallback
+            formData.append("role", user.role);
             formData.append("dob", data.dob || "");
             formData.append("province", data.province || "");
             formData.append("district", data.district || "");
             formData.append("city", data.city || "");
             formData.append("address", data.address || "");
             formData.append("altPhone", data.altPhone || "");
+
+            // Append Location
+            if (user.location && user.location.coordinates) {
+                formData.append('lng', user.location.coordinates[0].toString());
+                formData.append('lat', user.location.coordinates[1].toString());
+            } else if (user.lat && user.lng) {
+                formData.append('lat', user.lat);
+                formData.append('lng', user.lng);
+            }
 
             if (fileInputRef.current?.files?.[0]) {
                 formData.append("image", fileInputRef.current.files[0]);
@@ -129,6 +186,10 @@ export default function ProfilePage() {
             if (result.success) {
                 toast.success("Profile updated successfully!");
                 setUser(result.data);
+                // Assuming uploads are at /uploads/users/
+                if (result.data.image && result.data.image !== 'no-photo.jpg') {
+                    setImagePreview(`/uploads/users/${result.data.image}?t=${new Date().getTime()}`);
+                }
             } else {
                 toast.error(result.error || "Failed to update profile");
             }
@@ -144,7 +205,67 @@ export default function ProfilePage() {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center py-4">
-            {/* Header matching design */}
+
+            {/* Map Modal */}
+            {showMap && (
+                <MapPicker
+                    initialLocation={
+                        user?.location?.coordinates
+                            ? [user.location.coordinates[1], user.location.coordinates[0]]
+                            : undefined
+                    }
+                    onLocationSelect={handleLocationSelect}
+                    onCancel={() => setShowMap(false)}
+                />
+            )}
+
+            {/* Location Choice Modal */}
+            {showLocationChoice && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <h3 className="text-xl font-semibold mb-4 text-center">Set Location</h3>
+                        <p className="text-gray-500 text-center mb-6">How would you like to set your farm location?</p>
+
+                        <div className="space-y-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full py-6 flex items-center justify-center gap-2 text-base border-primary/20 hover:bg-primary/5 hover:text-primary"
+                                onClick={handleAutoGPS}
+                            >
+                                🎯 Use Current GPS
+                            </Button>
+
+                            <div className="relative flex py-2 items-center">
+                                <div className="flex-grow border-t border-gray-200"></div>
+                                <span className="flex-shrink mx-4 text-gray-400 text-xs uppercase">Or</span>
+                                <div className="flex-grow border-t border-gray-200"></div>
+                            </div>
+
+                            <Button
+                                type="button"
+                                className="w-full py-6 flex items-center justify-center gap-2 text-base"
+                                onClick={() => {
+                                    setShowLocationChoice(false);
+                                    setShowMap(true);
+                                }}
+                            >
+                                🗺️ Pick on Map
+                            </Button>
+                        </div>
+
+                        <Button
+                            variant="ghost"
+                            className="w-full mt-4 text-gray-400"
+                            onClick={() => setShowLocationChoice(false)}
+                        >
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Header */}
             <div className="w-full max-w-md bg-white p-4 flex items-center mb-4 sticky top-0 z-10">
                 <button onClick={() => router.back()} className="mr-4 text-green-800">
                     <BackIcon />
@@ -207,14 +328,12 @@ export default function ProfilePage() {
                     <div>
                         <input
                             {...register("dob")}
-                            type="date" // Or text if design implies custom picker, relying on browser native for now
+                            type="date"
                             placeholder="Date of Birth"
-                            className="w-full bg-gray-100 border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-green-700 outline-none text-gray-500" // Text gray if empty?
+                            className="w-full bg-gray-100 border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-green-700 outline-none text-gray-500"
                         />
-                        {/* Note: value handling for date inputs might need formatting */}
                     </div>
 
-                    {/* Province Dropdown */}
                     <div className="relative">
                         <select
                             {...register("province")}
@@ -267,6 +386,34 @@ export default function ProfilePage() {
                             className="w-full bg-gray-100 border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-green-700 outline-none text-black"
                         />
                     </div>
+
+                    {/* Location Buttons - Only for Sellers */}
+                    {user?.role === 'seller' && (
+                        <div className="mb-6 border-t pt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Farm Location</label>
+                            <div className="flex gap-2 mb-2">
+                                <Button
+                                    type="button"
+                                    onClick={() => setShowLocationChoice(true)}
+                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                    📍 Set Location
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => setShowMap(true)}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                >
+                                    🗺️ Map
+                                </Button>
+                            </div>
+                            {user.location && user.location.coordinates && (
+                                <p className="text-xs text-green-600 text-center">
+                                    ✅ Selected: {user.location.coordinates[1].toFixed(4)}, {user.location.coordinates[0].toFixed(4)}
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     <div className="pt-4 flex gap-4">
                         <button
