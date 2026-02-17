@@ -22,7 +22,7 @@ export const RegisterForm = () => {
       setSelectedRole(roleFromUrl);
     } else {
       // Redirect back to role selection if no/invalid role
-      router.replace("/select-role"); // ← change to your actual role page path
+      router.replace("/select-role");
     }
   }, [searchParams, router]);
 
@@ -58,7 +58,7 @@ export const RegisterForm = () => {
             fullName: data.fullName,
             phone: data.phone,
             password: data.password,
-            role: selectedRole, // ← from URL query
+            role: selectedRole, 
           }),
         },
       );
@@ -113,13 +113,13 @@ export const RegisterForm = () => {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 text-black">
           <label className="text-sm font-medium text-black">Full Name</label>
           <input
             {...register("fullName")}
-            className={`border rounded-md p-2 outline-none transition w-full text-gray-900 ${errors.fullName
+            className={`border rounded-md p-2 outline-none transition w-full text-black ${errors.fullName
               ? "border-red-500 focus:ring-1 focus:ring-red-500"
-              : "border-gray-300 focus:border-green-500"
+              : "border-gray-300 focus:border-green-500 "
               }`}
             placeholder="Ram Bahadur Thapa"
           />

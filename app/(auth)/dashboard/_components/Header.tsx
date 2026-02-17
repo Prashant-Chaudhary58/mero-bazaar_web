@@ -5,20 +5,40 @@ import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import api from "@/lib/axios";
 
 interface User {
     fullName: string;
     image: string;
     role: string;
+    cachedImage?: string;
+    isAdmin?: boolean;
 }
 
 export default function Header() {
     const [user, setUser] = useState<User | null>(null);
+
+    // DEBUG: Check if isAdmin is present
+    useEffect(() => {
+        if (user) console.log("Current FE User State:", user);
+    }, [user]);
+
     const [showPopup, setShowPopup] = useState(false);
     const popupRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
 
     useEffect(() => {
+        // 1. Try to load from localStorage first
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse user from localStorage", e);
+            }
+        }
+
+        // 2. Fetch fresh data from backend
         fetchUser();
 
         function handleClickOutside(event: MouseEvent) {
@@ -36,25 +56,79 @@ export default function Header() {
         try {
             const res = await fetch("http://localhost:5001/api/v1/auth/me", {
                 credentials: "include",
+                cache: "no-store",
+                headers: {
+                    "Pragma": "no-cache",
+                    "Cache-Control": "no-cache"
+                }
             });
             const data = await res.json();
             if (data.success) {
-                setUser(data.data);
+                const userData = data.data;
+
+                // Cache Image as Base64
+                // Cache Image as Base64
+                if (userData.image && userData.image !== 'no-photo.jpg') {
+                    try {
+                        const folder = 'users'; // Now standardized to users
+                        const imageUrl = `http://localhost:5001/uploads/${folder}/${userData.image}?t=${new Date().getTime()}`;
+                        console.log("Header: Fetching image from:", imageUrl);
+                        const imgRes = await fetch(imageUrl);
+                        if (!imgRes.ok) throw new Error(`Image not found: ${imgRes.status}`);
+                        const blob = await imgRes.blob();
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const base64data = reader.result;
+                            // Add base64 image to user object for local storage
+                            const userWithCachedImage = { ...userData, cachedImage: base64data };
+                            setUser(userWithCachedImage);
+                            localStorage.setItem("user", JSON.stringify(userWithCachedImage));
+                        };
+                        reader.readAsDataURL(blob);
+                    } catch (imgError) {
+                        console.error("Header: Failed to cache image", imgError);
+                        // Fallback: save user without cached image if image fetch fails
+                        // IMPORTANT: Clear cachedImage if it exists but is invalid
+                        const userWithoutCache = { ...userData, cachedImage: undefined };
+                        setUser(userWithoutCache);
+                        localStorage.setItem("user", JSON.stringify(userWithoutCache));
+                    }
+                } else {
+                    setUser(userData);
+                    localStorage.setItem("user", JSON.stringify(userData));
+                }
             }
         } catch (error) {
-            console.error(error);
+            console.error("Header: fetchUser failed", error);
+            // If fetch fails (backend down), we rely on the initial localStorage load
         }
+    };
+
+    // Helper to get image URL for the UI (not for caching)
+    const getImageUrl = () => {
+        if (!user || !user.image || user.image === 'no-photo.jpg') return null;
+        if (user.cachedImage) return user.cachedImage;
+        const folder = 'users';
+        const url = `http://localhost:5001/uploads/${folder}/${user.image}?t=${new Date().getTime()}`;
+        // console.log("Header: Rendering Image URL:", url); // Uncomment for spammy logs
+        return url;
     };
 
     const handleLogout = async () => {
         try {
-            await fetch("http://localhost:5001/api/v1/auth/logout", {
-                credentials: "include",
-            });
+            await api.get("/api/v1/auth/logout");
+            // 4. Clear localStorage on logout
+            localStorage.removeItem("user");
+            setUser(null); // Clear state immediately
             router.push("/login");
             toast.success("Logged out successfully");
         } catch (error) {
-            toast.error("Logout failed");
+            console.error(error);
+            // Even if api fails, clear local state
+            localStorage.removeItem("user");
+            setUser(null);
+            router.push("/login");
+            toast.success("Logged out (Server Unreachable)");
         }
     };
 
@@ -116,9 +190,15 @@ export default function Header() {
                                 <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-green-100 hover:border-[#4B7321] transition">
                                     {user.image && user.image !== 'no-photo.jpg' ? (
                                         <img
-                                            src={`http://localhost:5001/public/uploads/${user.image}`}
+                                            src={getImageUrl() || ''}
                                             alt="Profile"
                                             className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                // Fallback if cached image fails or backend url fails
+                                                e.currentTarget.style.display = 'none';
+                                                e.currentTarget.parentElement?.classList.add('bg-gray-200');
+                                                // Could show SVG here but simply hiding for now or letting it stay empty
+                                            }}
                                         />
                                     ) : (
                                         <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
@@ -134,7 +214,10 @@ export default function Header() {
                             {showPopup && (
                                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fade-in-down">
                                     <div className="p-4 border-b border-gray-100">
-                                        <p className="font-bold text-gray-800 text-sm">Hello, {user.fullName.split(' ')[0]}</p>
+                                        <p className="font-bold text-gray-800 text-sm">
+                                            Hello, {user.fullName.split(' ')[0]}
+                                            {(user.role === 'admin' || user.isAdmin) && <span className="ml-2 text-xs text-red-500">(Admin)</span>}
+                                        </p>
                                         <Link onClick={() => setShowPopup(false)} href="/user/profile" className="text-xs text-[#4B7321] hover:underline">
                                             view & edit your profile
                                         </Link>
@@ -146,6 +229,11 @@ export default function Header() {
                                         <button className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                             <span className="mr-3">🌐</span> Language
                                         </button>
+                                        {(user.role === 'admin' || (user as any).isAdmin) && (
+                                            <Link onClick={() => setShowPopup(false)} href="/admin" className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
+                                                <span className="mr-3">🛡️</span> Switch to Admin
+                                            </Link>
+                                        )}
                                         <div className="border-t border-gray-100 my-1"></div>
                                         <button onClick={handleLogout} className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                                             <span className="mr-3">🚪</span> Logout

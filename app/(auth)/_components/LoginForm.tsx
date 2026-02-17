@@ -42,7 +42,6 @@ export const LoginForm = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        // backend errors like "Invalid credentials"
         setServerError(result.error || "Login failed. Please try again.");
         return;
       }

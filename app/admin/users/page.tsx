@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import api from "@/lib/axios";
 
 interface User {
     _id: string;
@@ -23,12 +24,9 @@ export default function AdminUsersPage() {
 
     const fetchUsers = async () => {
         try {
-            const res = await fetch("http://localhost:5001/api/admin/users", {
-                credentials: "include", // Important for admin middleware
-            });
-            const data = await res.json();
-            if (data.success) {
-                setUsers(data.data);
+            const res = await api.get("/api/admin/users");
+            if (res.data.success) {
+                setUsers(res.data.data);
             } else {
                 toast.error("Failed to fetch users");
             }
@@ -44,17 +42,13 @@ export default function AdminUsersPage() {
         if (!confirm("Are you sure you want to delete this user?")) return;
 
         try {
-            const res = await fetch(`http://localhost:5001/api/admin/users/${id}`, {
-                method: "DELETE",
-                credentials: "include",
-            });
-            const data = await res.json();
+            const res = await api.delete(`/api/admin/users/${id}`);
 
-            if (data.success) {
+            if (res.data.success) {
                 toast.success("User deleted");
                 setUsers(users.filter((u) => u._id !== id));
             } else {
-                toast.error(data.error || "Failed to delete");
+                toast.error(res.data.error || "Failed to delete");
             }
         } catch (error) {
             toast.error("Error deleting user");
@@ -103,12 +97,12 @@ export default function AdminUsersPage() {
                                                 className="h-10 w-10 rounded-full object-cover"
                                                 src={
                                                     user.image && user.image !== "no-photo.jpg"
-                                                        ? `http://localhost:5001/public/uploads/${user.image}` // Fixed Check path
-                                                        : "https://via.placeholder.com/40"
+                                                        ? `http://localhost:5001/uploads/users/${user.image}`
+                                                        : "/placeholder.svg"
                                                 }
                                                 alt=""
                                                 onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = "https://via.placeholder.com/40";
+                                                    (e.target as HTMLImageElement).src = "/placeholder.svg";
                                                 }}
                                             />
                                         </div>
@@ -122,7 +116,7 @@ export default function AdminUsersPage() {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                                            user.role === 'seller' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                                        user.role === 'seller' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
                                         }`}>
                                         {user.role}
                                     </span>
