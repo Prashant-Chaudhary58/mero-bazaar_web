@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ interface User {
     city?: string;
     address?: string;
     altPhone?: string;
+    lat?: string;
+    lng?: string;
     location?: {
         type: string;
         coordinates: number[];
@@ -33,12 +36,17 @@ interface ProfileModalProps {
     onUpdate: (updatedUser: User) => void;
 }
 
+// Dynamically import MapPicker with SSR disabled
+const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
+
 export function ProfileModal({ isOpen, onClose, user, onUpdate }: ProfileModalProps) {
     const [saving, setSaving] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [formData, setFormData] = useState<Partial<User>>({});
+    const [showMap, setShowMap] = useState(false);
+    const [showLocationChoice, setShowLocationChoice] = useState(false);
 
     // Reset state when modal opens
     useEffect(() => {
@@ -74,6 +82,48 @@ export function ProfileModal({ isOpen, onClose, user, onUpdate }: ProfileModalPr
 
     const [loadingLocation, setLoadingLocation] = useState(false);
 
+    const fetchAddress = async (lat: number, lng: number) => {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+            );
+            const data = await response.json();
+
+            if (data && data.address) {
+                const addr = data.address;
+                const updates: Partial<User> = {
+                    province: addr.state || addr.region || "",
+                    district: addr.county || addr.district || "",
+                    city: addr.city || addr.town || addr.village || "",
+                    address: addr.road || addr.suburb || ""
+                };
+                setFormData(prev => ({ ...prev, ...updates }));
+                toast.success("Address updated from location!");
+            }
+        } catch (error) {
+            console.error("Geocoding error:", error);
+            toast.error("Failed to fetch address details.");
+        }
+    };
+
+    const handleLocationSelect = (lat: number, lng: number) => {
+        setFormData(prev => ({
+            ...prev,
+            lat: lat.toString(),
+            lng: lng.toString(),
+            location: {
+                type: 'Point',
+                coordinates: [lng, lat],
+            },
+        }));
+
+        // Fetch address for the selected location
+        fetchAddress(lat, lng);
+
+        setShowMap(false);
+        toast.success("Location set! Click Save to apply changes.");
+    };
+
     const handleAutoFillLocation = () => {
         if (!navigator.geolocation) {
             toast.error("Geolocation is not supported by your browser");
@@ -84,43 +134,10 @@ export function ProfileModal({ isOpen, onClose, user, onUpdate }: ProfileModalPr
         navigator.geolocation.getCurrentPosition(
             async (position) => {
                 const { latitude, longitude } = position.coords;
-
-                // Update coordinates
-                setFormData(prev => ({
-                    ...prev,
-                    location: {
-                        type: "Point",
-                        coordinates: [longitude, latitude] // MongoDB uses [lng, lat]
-                    }
-                }));
-
-                try {
-                    // Reverse Geocoding using OpenStreetMap (Nominatim)
-                    const response = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-                    );
-                    const data = await response.json();
-
-                    if (data && data.address) {
-                        const addr = data.address;
-
-                        // Map OSM address fields to our schema
-                        const updates: Partial<User> = {
-                            province: addr.state || addr.region || "",
-                            district: addr.county || addr.district || "",
-                            city: addr.city || addr.town || addr.village || "",
-                            address: addr.road || addr.suburb || "" // Street address
-                        };
-
-                        setFormData(prev => ({ ...prev, ...updates }));
-                        toast.success("Location fetched successfully!");
-                    }
-                } catch (error) {
-                    console.error("Geocoding error:", error);
-                    toast.error("Got coordinates, but failed to fetch address details.");
-                } finally {
-                    setLoadingLocation(false);
-                }
+                handleLocationSelect(latitude, longitude);
+                // fetchAddress is called within handleLocationSelect now
+                setShowLocationChoice(false);
+                setLoadingLocation(false);
             },
             (error) => {
                 console.error("Geolocation error:", error);
@@ -141,15 +158,18 @@ export function ProfileModal({ isOpen, onClose, user, onUpdate }: ProfileModalPr
         // Append all text fields
         Object.keys(formData).forEach(key => {
             const value = (formData as any)[key];
-            if (value !== undefined && value !== null && key !== 'image' && key !== 'location') {
+            if (value !== undefined && value !== null && key !== 'image' && key !== 'location' && key !== 'lat' && key !== 'lng') {
                 submitData.append(key, value as string);
             }
         });
 
-        // Append location if exists
-        if (formData.location) {
-            submitData.append('location', JSON.stringify(formData.location));
-        }
+        // Explicitly append lat/lng
+        // Prioritize formData (newly selected), fall back to user (existing)
+        const lat = formData.lat || user.lat;
+        const lng = formData.lng || user.lng;
+
+        if (lat) submitData.append('lat', lat.toString());
+        if (lng) submitData.append('lng', lng.toString());
 
         // Append image if selected
         if (selectedFile) {
@@ -279,21 +299,24 @@ export function ProfileModal({ isOpen, onClose, user, onUpdate }: ProfileModalPr
                         className="bg-gray-100 border-none rounded-lg py-6 text-base text-black"
                     />
 
-                    {/* Set Farm Location Button */}
+                    {/* Location Buttons */}
                     {user.role === 'seller' && (
-                        <Button
-                            type="button"
-                            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-6 rounded-lg flex items-center justify-center gap-2"
-                            onClick={handleAutoFillLocation}
-                            disabled={loadingLocation}
-                        >
-                            {loadingLocation ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
+                        <div className="space-y-3">
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-6 rounded-lg flex items-center justify-center gap-2"
+                                    onClick={() => setShowLocationChoice(true)}
+                                >
+                                    📍 Set Location
+                                </Button>
+                            </div>
+                            {formData.location?.coordinates && (
+                                <p className="text-xs text-green-600 text-center">
+                                    ✅ Selected: {formData.location.coordinates[1].toFixed(4)}, {formData.location.coordinates[0].toFixed(4)}
+                                </p>
                             )}
-                            Set Farm Location (Auto-Fill)
-                        </Button>
+                        </div>
                     )}
 
                     <Input
@@ -324,6 +347,71 @@ export function ProfileModal({ isOpen, onClose, user, onUpdate }: ProfileModalPr
                     </Button>
                 </div>
             </div>
-        </Modal>
+
+
+            {/* Map Modal */}
+            {
+                showMap && (
+                    <MapPicker
+                        initialLocation={
+                            formData.location?.coordinates
+                                ? [formData.location.coordinates[1], formData.location.coordinates[0]] // [lat, lng]
+                                : undefined
+                        }
+                        onLocationSelect={handleLocationSelect}
+                        onCancel={() => setShowMap(false)}
+                    />
+                )
+            }
+
+            {/* Location Choice Modal */}
+            {
+                showLocationChoice && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" style={{ zIndex: 60 }}>
+                        <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-200">
+                            <h3 className="text-xl font-semibold mb-4 text-center">Set Location</h3>
+                            <p className="text-gray-500 text-center mb-6">How would you like to set your farm location?</p>
+
+                            <div className="space-y-3">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full py-6 flex items-center justify-center gap-2 text-base border-primary/20 hover:bg-primary/5 hover:text-primary"
+                                    onClick={handleAutoFillLocation}
+                                    disabled={loadingLocation}
+                                >
+                                    {loadingLocation ? "Fetching..." : "🎯 Use Current GPS"}
+                                </Button>
+
+                                <div className="relative flex py-2 items-center">
+                                    <div className="flex-grow border-t border-gray-200"></div>
+                                    <span className="flex-shrink mx-4 text-gray-400 text-xs uppercase">Or</span>
+                                    <div className="flex-grow border-t border-gray-200"></div>
+                                </div>
+
+                                <Button
+                                    type="button"
+                                    className="w-full py-6 flex items-center justify-center gap-2 text-base"
+                                    onClick={() => {
+                                        setShowLocationChoice(false);
+                                        setShowMap(true);
+                                    }}
+                                >
+                                    🗺️ Pick on Map
+                                </Button>
+                            </div>
+
+                            <Button
+                                variant="ghost"
+                                className="w-full mt-4 text-gray-400"
+                                onClick={() => setShowLocationChoice(false)}
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                )
+            }
+        </Modal >
     );
 }

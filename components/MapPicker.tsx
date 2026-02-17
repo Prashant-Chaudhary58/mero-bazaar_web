@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 // Leaflet must be imported dynamically or checked for window, but react-leaflet handles some.
@@ -23,6 +24,14 @@ interface MapPickerProps {
     initialLocation?: [number, number];
     onLocationSelect: (lat: number, lng: number) => void;
     onCancel: () => void;
+}
+
+function MapController() {
+    const map = useMapEvents({});
+    useEffect(() => {
+        map.invalidateSize();
+    }, [map]);
+    return null;
 }
 
 function LocationMarker({ position, setPosition }: { position: [number, number] | null, setPosition: (pos: [number, number]) => void }) {
@@ -50,9 +59,18 @@ export default function MapPicker({ initialLocation, onLocationSelect, onCancel 
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white dark:bg-gray-800 w-full max-w-3xl rounded-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
+
+    if (!mounted) return null;
+
+    return createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onCancel}>
+            <div className="bg-white dark:bg-gray-800 w-full max-w-3xl rounded-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                 <div className="p-4 border-b flex justify-between items-center bg-gray-50 dark:bg-gray-700">
                     <h3 className="font-semibold text-lg">Pick Farm Location</h3>
                     <Button variant="ghost" size="sm" onClick={onCancel}>✕</Button>
@@ -62,23 +80,25 @@ export default function MapPicker({ initialLocation, onLocationSelect, onCancel 
                     <MapContainer
                         center={defaultCenter}
                         zoom={13}
-                        style={{ height: '100%', width: '100%' }}
+                        style={{ height: '400px', width: '100%' }}
                     >
                         <TileLayer
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
                         <LocationMarker position={position} setPosition={setPosition} />
+                        <MapController />
                     </MapContainer>
                 </div>
 
                 <div className="p-4 border-t bg-gray-50 dark:bg-gray-700 flex justify-end gap-3">
                     <Button variant="outline" onClick={onCancel}>Cancel</Button>
                     <Button onClick={handleConfirm} disabled={!position}>
-                        Confirm Location
+                        Set Location
                     </Button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

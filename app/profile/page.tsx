@@ -77,45 +77,7 @@ export default function ProfilePage() {
             }
         };
 
-        // ... (keep handleImageChange and handleLocationSelect same)
 
-        // ... inside handleSubmit ...
-        // Append Location manually if it exists
-        if (user.location && user.location.coordinates) {
-            // Backend expects lat and lng fields
-            formData.append('lng', user.location.coordinates[0].toString());
-            formData.append('lat', user.location.coordinates[1].toString());
-        }
-
-        // ... inside return JSX ...
-        {
-            user.role === 'seller' && (
-                <div className="mb-6">
-                    <div className="flex gap-4 mb-2">
-                        <Button
-                            type="button"
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-6 text-lg font-medium shadow-sm transition-all active:scale-[0.98]"
-                            onClick={() => setShowLocationChoice(true)}
-                        >
-                            📍 Set Farm Location (Auto-Fill)
-                        </Button>
-                        <Button
-                            type="button"
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium shadow-sm transition-all active:scale-[0.98]"
-                            onClick={() => setShowMap(true)}
-                        >
-                            🗺️ Pick on Map
-                        </Button>
-                    </div>
-
-                    {user.location && user.location.coordinates && (
-                        <p className="text-xs text-green-600 mt-2 text-center">
-                            ✅ Location is currently set to: {user.location.coordinates[1].toFixed(4)}, {user.location.coordinates[0].toFixed(4)}
-                        </p>
-                    )}
-                </div>
-            )
-        }
 
         fetchUser();
     }, [router]);
