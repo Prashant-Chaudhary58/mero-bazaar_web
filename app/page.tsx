@@ -7,6 +7,7 @@ import ProductCard from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProfileModal } from '@/components/profile/ProfileModal';
+import { calculateDistance } from '@/lib/utils';
 
 interface Product {
   _id: string;
@@ -21,7 +22,11 @@ interface Product {
   seller: {
     name: string;
     _id: string;
+    lat?: string;
+    lng?: string;
+    farmName?: string;
   };
+  distance?: number;
 }
 
 const CATEGORIES = ["All", "Vegetables", "Fruits", "Grains", "Others"];
@@ -33,7 +38,9 @@ export default function DashboardPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [user, setUser] = useState<{ fullName: string; role: string; image?: string; isAdmin?: boolean } | null>(null);
+  const [user, setUser] = useState<{ fullName: string; role: string; image?: string; isAdmin?: boolean; lat?: string; lng?: string; } | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
@@ -66,11 +73,34 @@ export default function DashboardPage() {
         }
       } catch (error) {
         console.error("Failed to fetch fresh user data", error);
-        // If 401, maybe clear localStorage? For now, keep as is or let existing guards handle it
+        // If the session is invalid, clear the stale user data
+        localStorage.removeItem('user');
+        setUser(null);
       }
     };
     fetchUser();
   }, []);
+
+  const handleEnableLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCurrentLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+        setLocationError(null);
+      },
+      (error) => {
+        console.error("Error getting location", error);
+        setLocationError("Unable to retrieve your location. Please check browser permissions.");
+      }
+    );
+  };
 
   const handleLogout = async () => {
     try {
@@ -100,7 +130,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     filterProducts();
-  }, [products, selectedCategory, searchQuery]);
+  }, [products, selectedCategory, searchQuery, user, currentLocation]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -143,6 +173,36 @@ export default function DashboardPage() {
         p.name.toLowerCase().includes(query) ||
         p.description.toLowerCase().includes(query)
       );
+    }
+
+    // Distance Calculation & Sorting
+    // Use user profile location OR temporary current location
+    const userLat = user?.lat ? parseFloat(user.lat) : currentLocation?.lat;
+    const userLng = user?.lng ? parseFloat(user.lng) : currentLocation?.lng;
+
+    if (userLat && userLng) {
+      temp = temp.map(p => {
+        if (p.seller?.lat && p.seller?.lng) {
+          const dist = calculateDistance(
+            userLat,
+            userLng,
+            parseFloat(p.seller.lat),
+            parseFloat(p.seller.lng)
+          );
+          return { ...p, distance: dist };
+        }
+        return p;
+      });
+
+      // Sort by distance (nearest first)
+      temp.sort((a, b) => {
+        if (a.distance !== undefined && b.distance !== undefined) {
+          return a.distance - b.distance;
+        }
+        if (a.distance !== undefined) return -1;
+        if (b.distance !== undefined) return 1;
+        return 0;
+      });
     }
 
     setFilteredProducts(temp);
@@ -261,6 +321,36 @@ export default function DashboardPage() {
             <p className="text-gray-600 dark:text-gray-300 mt-2">Directly from farmers to your kitchen.</p>
           </div>
 
+          {/* Geolocation Prompt for Buyers */}
+          {user && !user.lat && !currentLocation && (
+            <div className="max-w-md mx-auto bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-center gap-2 text-blue-800">
+                <span>📍</span>
+                <span className="text-sm font-medium">Enable location to find nearest products</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="bg-white hover:bg-blue-100 text-blue-700 border-blue-200"
+                onClick={handleEnableLocation}
+              >
+                Enable
+              </Button>
+            </div>
+          )}
+
+          {locationError && (
+            <div className="max-w-md mx-auto text-center text-xs text-red-500 bg-red-50 p-2 rounded border border-red-100">
+              {locationError}
+            </div>
+          )}
+
+          {currentLocation && !user?.lat && (
+            <div className="max-w-md mx-auto text-center text-xs text-green-600 bg-green-50 p-2 rounded border border-green-100">
+              📍 Showing products near your current location
+            </div>
+          )}
+
           <div className="flex flex-col md:flex-row gap-4 items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm max-w-4xl mx-auto">
             <div className="w-full md:w-1/3">
               <Input
@@ -298,7 +388,7 @@ export default function DashboardPage() {
         ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredProducts.map(product => (
-              <ProductCard key={product._id} product={product} />
+              <ProductCard key={product._id} product={product} distance={product.distance} />
             ))}
           </div>
         ) : (

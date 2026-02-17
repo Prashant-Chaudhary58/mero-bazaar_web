@@ -17,13 +17,15 @@ interface Product {
         _id: string;
         farmName?: string;
     };
+    distance?: number;
 }
 
 interface ProductCardProps {
     product: Product;
+    distance?: number;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, distance }) => {
     const router = useRouter();
 
 
@@ -41,6 +43,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 <div className="absolute top-2 right-2 bg-white/90 dark:bg-black/70 px-2 py-1 rounded-md text-xs font-bold text-primary shadow-sm">
                     {product.category}
                 </div>
+                {distance !== undefined && (
+                    <div className="absolute top-2 left-2 bg-yellow-400 text-black px-2 py-1 rounded-md text-xs font-bold shadow-sm flex items-center gap-1">
+                        📍 {distance} km
+                    </div>
+                )}
             </div>
 
             <div className="p-4 flex flex-col flex-grow">
