@@ -54,7 +54,7 @@ export default function AdminDashboard() {
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-gray-500 text-sm font-medium">Pending Verifications</h3>
                     <p className="text-3xl font-bold text-gray-800 mt-2">{stats.pendingProducts}</p>
-                    <Link href="/admin/products" className="text-blue-600 text-sm mt-4 inline-block hover:underline">View Products &rarr;</Link>
+                    <Link href="/admin/products/pending" className="text-blue-600 text-sm mt-4 inline-block hover:underline">View Pending &rarr;</Link>
                 </div>
 
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -68,8 +68,11 @@ export default function AdminDashboard() {
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Actions</h2>
                     <div className="flex gap-4">
+                        <Link href="/admin/products/pending" className="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition">
+                            Verify Pending
+                        </Link>
                         <Link href="/admin/products" className="bg-[#4B7321] text-white px-6 py-3 rounded-lg hover:bg-green-800 transition">
-                            Verify Products
+                            Manage All Products
                         </Link>
                         <Link href="/admin/users" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
                             Manage Users
@@ -77,6 +80,6 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

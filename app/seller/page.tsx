@@ -42,14 +42,6 @@ export default function SellerDashboard() {
 
     const fetchMyProducts = async () => {
         try {
-            // Backend doesn't have a direct "get my products" endpoint based on reading `product_route.js`
-            // But query param `seller=ID` might work if I implement it, or filtering on client side if API returns all.
-            // `getAllProducts` doesn't seem to support filtering by seller ID in `req.query` explicitely, 
-            // but Mongoose `find(req.query)` (if implemented that way) would work. 
-            // Checking `product_controller.js`: `let query = Product.find();`. It does NOT spread req.query.
-            // So I can't filter by seller via API.
-            // I will fetch ALL and filter client side for now (Not efficient but works for MVP).
-            // OR I can use the existing /products API and filter in JS.
 
             // Fetch my products from the dedicated endpoint
             const response = await api.get('/api/v1/products/my-products');
