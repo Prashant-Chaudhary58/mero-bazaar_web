@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "react-hot-toast";  // ← add this import
+import { Toaster } from "react-hot-toast";
+import GlobalChatWrapper from "@/components/GlobalChatWrapper";  // ← add this import
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -70,6 +71,7 @@ export default function RootLayout({
             },
           }}
         />
+        <GlobalChatWrapper />
       </body>
     </html>
   );

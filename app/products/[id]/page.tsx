@@ -9,6 +9,7 @@ import api from '@/lib/axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
+
 interface Review {
     _id: string;
     title: string;
@@ -68,7 +69,9 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
     const [reviewText, setReviewText] = useState("");
     const [reviewTitle, setReviewTitle] = useState("");
     const [submittingReview, setSubmittingReview] = useState(false);
+
     const [showAllReviews, setShowAllReviews] = useState(false);
+    const [showChat, setShowChat] = useState(false);
 
     useEffect(() => {
         fetchProduct();
@@ -98,9 +101,17 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
         }
     };
 
-    const handleCallFarmer = () => {
-        if (product?.seller?.phone) {
+    const handleContactFarmer = () => {
+        if (!user) {
+            toast.error("Please login to contact the seller");
+            router.push('/auth/login');
+            return;
         }
+
+        const event = new CustomEvent('open-chat', {
+            detail: { receiverId: product?.seller?._id }
+        });
+        window.dispatchEvent(event);
     };
 
     const handleDelete = async () => {
@@ -219,8 +230,8 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
 
                         {/* Action Buttons */}
                         <div className="flex gap-3 flex-wrap">
-                            <Button onClick={handleCallFarmer} variant="outline" className="flex-1">
-                                📞 Call Farmer
+                            <Button onClick={handleContactFarmer} variant="outline" className="flex-1">
+                                💬 Contact Farmer
                             </Button>
                             <Button onClick={handleVisitFarm} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
                                 📍 Visit Farm
@@ -238,91 +249,93 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
                             )}
                         </div>
                     </div>
-                </div>
 
-                {/* Reviews Section */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-                    <h3 className="text-xl font-bold mb-4">Reviews</h3>
+                    {/* Reviews Section */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                        <h3 className="text-xl font-bold mb-4">Reviews</h3>
 
-                    {/* Review Form */}
-                    {user && product && user._id !== product.seller._id ? (
-                        <form onSubmit={submitReview} className="mb-8 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                            <h4 className="font-semibold mb-3">Write a Review</h4>
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="block text-xs font-medium mb-1">Rating</label>
-                                    <select
-                                        value={rating}
-                                        onChange={(e) => setRating(Number(e.target.value))}
-                                        className="w-full p-2 rounded border border-gray-300 dark:bg-gray-800 rounded-md"
-                                    >
-                                        {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} Stars</option>)}
-                                    </select>
-                                </div>
-                                <Input
-                                    placeholder="Review Title"
-                                    value={reviewTitle}
-                                    onChange={e => setReviewTitle(e.target.value)}
-                                    required
-                                />
-                                <textarea
-                                    placeholder="Your experience..."
-                                    className="w-full p-2 rounded-md border border-gray-300 dark:bg-gray-800 dark:border-gray-600 focus:ring-2 focus:ring-primary focus:outline-none"
-                                    rows={3}
-                                    value={reviewText}
-                                    onChange={e => setReviewText(e.target.value)}
-                                />
-                                <Button type="submit" isLoading={submittingReview} size="sm">
-                                    Submit Review
-                                </Button>
-                            </div>
-                        </form>
-                    ) : (
-                        user && product && user._id === product.seller._id && (
-                            <div className="mb-8 p-4 bg-yellow-50 text-yellow-800 rounded-lg">
-                                You cannot review your own product.
-                            </div>
-                        )
-                    )}
-
-                    {/* Review List */}
-                    <div className="space-y-4">
-                        {product.reviews && product.reviews.length > 0 ? (
-                            <>
-                                {(showAllReviews ? product.reviews : product.reviews.slice(0, 3)).map(review => (
-                                    <div key={review._id} className="border-b border-gray-100 dark:border-gray-700 last:border-0 pb-4">
-                                        <div className="flex justify-between items-start">
-                                            <div className="font-semibold text-sm">{review.title}</div>
-                                            <div className="text-yellow-500 text-xs">{'★'.repeat(review.rating)}</div>
-                                        </div>
-                                        <p className="text-gray-600 dark:text-gray-300 text-sm mt-1">{review.text}</p>
-                                        <div className="flex justify-between items-center mt-2">
-                                            <div className="text-xs text-gray-400">- {review.user?.fullName || 'Anonymous'}</div>
-                                            <div className="text-xs text-gray-400">{new Date(review.createdAt).toLocaleDateString()}</div>
-                                        </div>
-                                    </div>
-                                ))}
-
-                                {product.reviews.length > 3 && (
-                                    <div className="text-center pt-2">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setShowAllReviews(!showAllReviews)}
-                                            className="text-primary hover:text-primary/80"
+                        {/* Review Form */}
+                        {user && product && user._id !== product.seller._id ? (
+                            <form onSubmit={submitReview} className="mb-8 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <h4 className="font-semibold mb-3">Write a Review</h4>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-medium mb-1">Rating</label>
+                                        <select
+                                            value={rating}
+                                            onChange={(e) => setRating(Number(e.target.value))}
+                                            className="w-full p-2 rounded border border-gray-300 dark:bg-gray-800 rounded-md"
                                         >
-                                            {showAllReviews ? "Show Less" : `Show All Reviews (${product.reviews.length})`}
-                                        </Button>
+                                            {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} Stars</option>)}
+                                        </select>
                                     </div>
-                                )}
-                            </>
+                                    <Input
+                                        placeholder="Review Title"
+                                        value={reviewTitle}
+                                        onChange={e => setReviewTitle(e.target.value)}
+                                        required
+                                    />
+                                    <textarea
+                                        placeholder="Your experience..."
+                                        className="w-full p-2 rounded-md border border-gray-300 dark:bg-gray-800 dark:border-gray-600 focus:ring-2 focus:ring-primary focus:outline-none"
+                                        rows={3}
+                                        value={reviewText}
+                                        onChange={e => setReviewText(e.target.value)}
+                                    />
+                                    <Button type="submit" isLoading={submittingReview} size="sm">
+                                        Submit Review
+                                    </Button>
+                                </div>
+                            </form>
                         ) : (
-                            <div className="text-center text-gray-500 py-4">No reviews yet. Be the first!</div>
+                            user && product && user._id === product.seller._id && (
+                                <div className="mb-8 p-4 bg-yellow-50 text-yellow-800 rounded-lg">
+                                    You cannot review your own product.
+                                </div>
+                            )
                         )}
+
+                        {/* Review List */}
+                        <div className="space-y-4">
+                            {product.reviews && product.reviews.length > 0 ? (
+                                <>
+                                    {(showAllReviews ? product.reviews : product.reviews.slice(0, 3)).map(review => (
+                                        <div key={review._id} className="border-b border-gray-100 dark:border-gray-700 last:border-0 pb-4">
+                                            <div className="flex justify-between items-start">
+                                                <div className="font-semibold text-sm">{review.title}</div>
+                                                <div className="text-yellow-500 text-xs">{'★'.repeat(review.rating)}</div>
+                                            </div>
+                                            <p className="text-gray-600 dark:text-gray-300 text-sm mt-1">{review.text}</p>
+                                            <div className="flex justify-between items-center mt-2">
+                                                <div className="text-xs text-gray-400">- {review.user?.fullName || 'Anonymous'}</div>
+                                                <div className="text-xs text-gray-400">{new Date(review.createdAt).toLocaleDateString()}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {product.reviews.length > 3 && (
+                                        <div className="text-center pt-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setShowAllReviews(!showAllReviews)}
+                                                className="text-primary hover:text-primary/80"
+                                            >
+                                                {showAllReviews ? "Show Less" : `Show All Reviews (${product.reviews.length})`}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="text-center text-gray-500 py-4">No reviews yet. Be the first!</div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
+            {/* Chat Widget */}
+
+        </div>
     );
 }

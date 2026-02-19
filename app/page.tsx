@@ -79,7 +79,18 @@ export default function DashboardPage() {
       }
     };
     fetchUser();
+
+    // 3. Load persisted location
+    const storedLocation = localStorage.getItem('currentLocation');
+    if (storedLocation) {
+      try {
+        setCurrentLocation(JSON.parse(storedLocation));
+      } catch (e) {
+        console.error("Failed to parse stored location", e);
+      }
+    }
   }, []);
+
 
   const handleEnableLocation = () => {
     if (!navigator.geolocation) {
@@ -89,10 +100,12 @@ export default function DashboardPage() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setCurrentLocation({
+        const loc = {
           lat: position.coords.latitude,
           lng: position.coords.longitude
-        });
+        };
+        setCurrentLocation(loc);
+        localStorage.setItem('currentLocation', JSON.stringify(loc));
         setLocationError(null);
       },
       (error) => {
